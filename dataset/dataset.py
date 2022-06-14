@@ -88,7 +88,7 @@ class Dataset(data.Dataset):
             mri_nii=nib.load(os.path.join(mri_dir, mri_file))
             mri=np.array(mri_nii.get_fdata(), dtype=np.float32)
             # 0-1 Normalization
-            mri=(mri-mri.min())/(mri.max()-mri.min())
+            # mri=(mri-mri.min())/(mri.max()-mri.min())
             mri=torch.from_numpy(mri)
             return mri_nii, mri
         
@@ -117,7 +117,11 @@ class Dataset(data.Dataset):
 
 
 if __name__ == '__main__':
-    rootpath="../data"
+    # dataset should return a list of M tensors (M is number of modality)
+    # TODO 
+    # check how to label tensor
+    # remove voxel-wise mean across subjects
+    rootpath="/Users/xli77/Documents/data"
     ds=Dataset(smri_in=os.path.join(rootpath,"smri"), fmri_in=os.path.join(rootpath,"fmri"), dmri_in=os.path.join(rootpath,"dmri"))
     dl=data.DataLoader(dataset=ds, batch_size=1, shuffle=True)
     for i, (smri_in, fmri_in, dmri_in) in enumerate(dl):
