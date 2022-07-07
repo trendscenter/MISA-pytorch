@@ -19,11 +19,9 @@ def loss(self):
 		for mm in range(MISAK.index.stop)[MISAK.index]:
 			ix = slice(tot + 0, tot + MISAK.d_k[mm][kk].item()) # self.ix = [tot + self.d_k[:m][:i] if self.ix is None, 'y_sub(ix,:) = O.Y{mm}(logical(O.S{mm}(kk,:)),:)' else for m in range(self.index)]
 			if ix is not None:
-				y_sub[:,int(ix.stop)] = MISAK.output[mm][:,kk] # Unknown for use of boolean in MATLAB code; Purpose of ix?
-				return y_sub
+				y_sub[:,int(ix.stop)-1] = MISAK.output[mm][:,kk] # Unknown for use of boolean in MATLAB code; Purpose of ix?
 			tot = tot + MISAK.d_k[mm][kk]
-	yyT = y_sub @ y_sub.T
-	import pdb; pdb.set_trace()
+	yyT = y_sub.T @ y_sub
 	g_k = torch.tensor(np.diag(pow(yyT,-.5)))
 	g2_k = torch.tensor(np.diag(pow(yyT, -1)))
 	g_kInv = torch.tensor(np.diag(pow(yyT,.5)))
