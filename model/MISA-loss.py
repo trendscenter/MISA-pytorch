@@ -6,6 +6,7 @@ from scipy.special import gamma
 import MISAK
 from subprocess import call
 from MISAK import __init__
+
 def loss(self):
 	JE = 0
 	JF = 0
@@ -33,7 +34,7 @@ def loss(self):
 		z_k_beta = torch.pow(z_k, MISAK.beta[kk])
 		JE = JE + MISAK.lam[kk] * torch.mean(z_k_beta)
 		if MISAK.eta[kk] != 1:
-			JF = JF + MISAK.eta[kk] * torch.mean(torch.log(z_k)) # "91 -" relevance?
+			JF = JF + (1-MISAK.eta[kk]) * torch.mean(torch.log(z_k)) # "91 -" relevance?
 		### JC = JC + torch.sum(torch.log(torch.tensor([np.linalg.eig(np.isnan(g_k * yyT * g_k)))[i] for i in range(len(np.isnan(torch.Tensor.detach(g_k).numpy() * (torch.Tensor.detach(yyT).numpy() * torch.Tensor.detach(g_k).numpy()))) - 2)])))
 		JC = JC + torch.sum(torch.log(torch.linalg.eig(g_k.T * (yyT * g_k.T))[0])) # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
 		# insert gradient descent here
@@ -41,6 +42,7 @@ def loss(self):
 		fc = 0.5 * math.log(math.pi) + torch.sum(gamma(MISAK.d)) - torch.sum(torch.log(gamma(0.5 * MISAK.d))) - torch.sum(MISAK.nu * torch.log(MISAK.lam)) - torch.sum(torch.log(MISAK.beta))
 		# insert gradient descent here
 	J = JE + JF + JC + JD + fc
+	return J
 
 model = MISAK.model # (weights = MISAK.weights, index = MISAK.index, subspace = MISAK.subspace, beta = MISAK.beta, eta = MISAK.eta, lam = MISAK.lam, input_dim = MISAK.input_dim, output_dim = MISAK.output_dim)
 
