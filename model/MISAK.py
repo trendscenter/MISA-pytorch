@@ -31,7 +31,7 @@ class MISA(nn.Module):
 		self.d = torch.sum(torch.cat(self.subspace[self.index], axis = 1), axis = 1)
 		self.nes = torch.ne(self.d, torch.zeros_like(self.d))
 		self.a = (torch.pow(self.lam,(-1/self.beta))) * gamma(self.nu + 1 / self.beta) / (self.d * gamma(self.nu)) # "NameError: name 'self' is not defined" despite passing through debugger
-		self.d_k = [torch.sum(self.subspace[i], axis = 1) for i in range(len(self.subspace))]
+		self.d_k = [(torch.sum(self.subspace[i].int(), axis = 1)).int() for i in range(len(self.subspace))]
 		self.K = self.nes.sum() # Unsure if consistent to summing up "True" elements or if added "False" and was coincidential
 	def seed():
 		random.seed()
@@ -58,7 +58,7 @@ input_dim = [6,6,6]
 output_dim = [5,5,5]
 model = MISA(weights = list(), index = index, subspace = subspace, beta = beta, eta = eta, lam = lam, input_dim = input_dim, output_dim = output_dim)
 N = 1000
-x = [torch.ones(N,d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+x = [torch.rand(N,d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
 model.forward(x)
 print(model.output)
 nes = model.nes
