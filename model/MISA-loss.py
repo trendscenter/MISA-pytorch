@@ -1,3 +1,4 @@
+from operator import index
 import torch
 import torch.nn as nn
 import numpy as np
@@ -36,11 +37,19 @@ def loss(self):
 		if MISAK.eta[kk] != 1:
 			JF = JF + (1-MISAK.eta[kk]) * torch.mean(torch.log(z_k)) # "91 -" relevance?
 		### JC = JC + torch.sum(torch.log(torch.tensor([np.linalg.eig(np.isnan(g_k * yyT * g_k)))[i] for i in range(len(np.isnan(torch.Tensor.detach(g_k).numpy() * (torch.Tensor.detach(yyT).numpy() * torch.Tensor.detach(g_k).numpy()))) - 2)])))
-		JC = JC + torch.sum(torch.log(torch.linalg.eig(g_k.T * (yyT * g_k.T))[0])) # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
+		JC = JC + torch.sum(torch.log(torch.linalg.eig(g_k[:,None] * (yyT * g_k[None,:]))[0])) # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
 		# insert gradient descent here
 		JC = JC / 2
-		fc = 0.5 * math.log(math.pi) + torch.sum(gamma(MISAK.d)) - torch.sum(torch.log(gamma(0.5 * MISAK.d))) - torch.sum(MISAK.nu * torch.log(MISAK.lam)) - torch.sum(torch.log(MISAK.beta))
+		fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(MISAK.d)) - torch.sum(torch.lgamma(0.5 * MISAK.d)) - torch.sum(MISAK.nu * torch.log(MISAK.lam)) - torch.sum(torch.log(MISAK.beta))
 		# insert gradient descent here
+		for mm in range(MISAK.index.stop)[MISAK.index]:
+			[rr, cc] = torch.tensor(MISAK.net).size()
+			if rr == cc:
+				JD = JD - torch.log(torch.abs(torch.det(MISAK.net[mm])))
+			else:
+				D = torch.linalg.eig(MISAK.net[mm] * MISAK.net.T[mm])[0]
+				JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
+				del D
 	J = JE + JF + JC + JD + fc
 	return J
 

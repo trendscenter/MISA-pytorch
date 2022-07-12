@@ -68,3 +68,4 @@ d_k = [torch.sum(model.subspace[i], axis = 1) for i in range(len(model.subspace)
 output = model.output
 weights = list()
 nu = model.nu
+net = model.net
