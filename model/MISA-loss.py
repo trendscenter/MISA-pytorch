@@ -43,7 +43,7 @@ def loss(self):
 		fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(MISAK.d)) - torch.sum(torch.lgamma(0.5 * MISAK.d)) - torch.sum(MISAK.nu * torch.log(MISAK.lam)) - torch.sum(torch.log(MISAK.beta))
 		# insert gradient descent here
 		for mm in range(MISAK.index.stop)[MISAK.index]:
-			[rr, cc] = torch.tensor(MISAK.net).size()
+			[rr, cc] = torch.tensor(MISAK.net.state_dict()['parameters']).size() # torch.tensor(MISAK.net).size()
 			if rr == cc:
 				JD = JD - torch.log(torch.abs(torch.det(MISAK.net[mm])))
 			else:
