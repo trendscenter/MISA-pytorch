@@ -2,7 +2,7 @@
 .vscode/
 run/
 model/__pycache__/
-
+model/__pycache__
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
