@@ -1,6 +1,7 @@
 # Other
 .vscode/
 run/
+model/__pycache__/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
