@@ -1,12 +1,6 @@
-from tkinter import N
 import torch
 import torch.nn as nn
-import numpy as np
-import math
-from scipy.special import gamma
 import random
-from torch.utils.data import DataLoader
-
 
 class MISA(nn.Module):
     # Unknown default parameters, "weights = None" for optional weight modification
@@ -38,24 +32,6 @@ class MISA(nn.Module):
         self.d_k = [(torch.sum(self.subspace[i].int(), axis=1)).int() for i in range(len(self.subspace))]
         # Unsure if consistent to summing up "True" elements or if added "False" and was coincidential
         self.K = self.nes.sum()
-	    self.len = x[0]
-	def __getitem__():
-		return self.x[self.index]
-
-	''' Example code for def __getitem__():
-	def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path)
-        label = self.img_labels.iloc[idx, 1]
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
-        return image, label '''
-
-	def __len__():
-		return self.len
-
     def seed(seed = None, seed_torch = True):
         if seed is None:
 			seed = torch.random.choice(2 ** 32)
@@ -67,34 +43,31 @@ class MISA(nn.Module):
 			torch.cuda.manual_seed(seed)
 			torch.backends.cudnn.benchmark = False
 			torch.backends.cudnn.deterministic = True
-
 	def seed_worker(worker_id):
 		worker_seed = torch.initial_seed() % 2**32
 		np.random.seed(worker_seed)
 		random.seed(worker_seed)
-
     def forward(self, x):
         self.output = [l(x[i]) if isinstance(l, nn.Linear) else None for i, l in enumerate(self.net)]
-
-    def loss():
+    def loss(self):
         JE = 0
         JF = 0
         JC = 0
         JD = 0
         fc = 0
-        model.nes
+        self.nes
         # [i for i, l in enumerate(MISAK.nes) if l == True]:
-        for kk in list(torch.where(model.nes)[0].numpy()):
+        for kk in list(torch.where(self.nes)[0].numpy()):
             # self.y_sub = [ for i in range(self.nes.T)], [tot = 0 for i in range(self.nes.T)]
-            y_sub = torch.zeros(model.output[0].shape[0], model.d[kk].int())
+            y_sub = torch.zeros(self.output[0].shape[0], self.d[kk].int())
             tot = 0
-            for mm in range(model.index.stop)[model.index]:
+            for mm in range(self.index.stop)[self.index]:
                 # self.ix = [tot + self.d_k[:m][:i] if self.ix is None, 'y_sub(ix,:) = O.Y{mm}(logical(O.S{mm}(kk,:)),:)' else for m in range(self.index)]
-                ix = slice(tot, tot + model.d_k[mm][kk].int())
+                ix = slice(tot, tot + self.d_k[mm][kk].int())
                 if ix.start < ix.stop:
                     # Unknown for use of boolean in MATLAB code; Purpose of ix?
-                    y_sub[:, ix] = model.output[mm][:,model.subspace[mm][kk, :] == 1]
-                tot = tot + model.d_k[mm][kk].int()
+                    y_sub[:, ix] = self.output[mm][:,self.subspace[mm][kk, :] == 1]
+                tot = tot + self.d_k[mm][kk].int()
             # torch.Tensor.detach(y_sub.T @ y_sub).numpy()
             yyT = y_sub.T @ y_sub
             # import pdb; pdb.set_trace()
@@ -106,59 +79,51 @@ class MISA(nn.Module):
             yyTInv = torch.linalg.inv(yyT)
             A = ybar_sub @ yyTInv  # ybar_sub =? torch.zeros_like(yyTInv)
             z_k = torch.sum(ybar_sub * A, axis=1)
-            z_k_beta = torch.pow(z_k, model.beta[kk])
-            JE = JE + model.lam[kk] * torch.mean(z_k_beta)
-            if model.eta[kk] != 1:
+            z_k_beta = torch.pow(z_k, self.beta[kk])
+            JE = JE + self.lam[kk] * torch.mean(z_k_beta)
+            if self.eta[kk] != 1:
                 # "91 -" relevance?
-                JF = JF + (1-model.eta[kk]) * torch.mean(torch.log(z_k))
+                JF = JF + (1-self.eta[kk]) * torch.mean(torch.log(z_k))
             # JC = JC + torch.sum(torch.log(torch.tensor([np.linalg.eig(np.isnan(g_k * yyT * g_k)))[i] for i in range(len(np.isnan(torch.Tensor.detach(g_k).numpy() * (torch.Tensor.detach(yyT).numpy() * torch.Tensor.detach(g_k).numpy()))) - 2)])))
             # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
             JC = JC + torch.sum(torch.log(torch.linalg.eig(g_k[:, None] * (yyT * g_k[None, :]))[0]))
             # insert gradient descent here
             JC = JC / 2
-            fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(model.d)) - torch.sum(torch.lgamma(0.5 * model.d)) - torch.sum(model.nu * torch.log(model.lam)) - torch.sum(torch.log(model.beta))
+            fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
             # insert gradient descent here
-            for mm in range(model.index.stop)[model.index]:
+            for mm in range(self.index.stop)[self.index]:
                 # torch.tensor(MISAK.net).size()
-                [rr, cc] = torch.tensor(model.net.state_dict()['parameters']).size()
+                [rr, cc] = torch.tensor(self.net[mm].weight).size()# state_dict()['parameters']).size()
                 if rr == cc:
-                    JD = JD - torch.log(torch.abs(torch.det(model.net[mm])))
+                    JD = JD - torch.log(torch.abs(torch.det(self.net[mm])))
                 else:
-                    D = torch.linalg.eig(model.net[mm] * model.net.T[mm])[0]
+                    D = torch.linalg.eig(self.net[mm] * self.net.T[mm])[0]
                     JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
                     del D
         J = JE + JF + JC + JD + fc
-
-    def train():
-		optim = torch.optim.Adam(weights, lr=learning_rate)
-		loss = model.loss(model.output, y_predicted)
+        return J
+    def training(self, train_data, learning_rate):
+        optim = torch.optim.Adam(self.parameters, lr=learning_rate)
+        training_loss = []
+        batch_loss = []
 		for epochs in n_iter:
-			optim.zero_grad()
-			y_predicted = model.forward(x)
-			loss.backward()
-			optim.step()
-			for epochs in n_iter:
-				slice = train_data[epochs]
-				train_data_store = []
-				train_data_store.append(slice)
-			if epochs % 10 == 0:
-				print('epoch ', epochs+1, ': w = ', weights, ' loss = ', loss)
-
-	def predict():
-		optim = torch.optim.Adam(weights, lr=learning_rate)
-		loss = model.loss(model.output, y_predicted)
-		for epochs in n_iter:
-			optim.zero_grad()
-			y_predicted = model.forward(x)
-			loss.backward()
-			optim.step()
-			for epochs in n_iter:
-				slice = test[epochs]
-				test_data_store = []
-				test_data_store.append(slice)
-
-			if epochs % 10 == 0:
-				print('epoch ', epochs+1, ': w = ', weights, ' loss = ', loss)
+            for i, data in enumerate(train_data, 0):
+                optim.zero_grad()
+                self.forward(data)
+                loss = self.loss()
+                loss.backward()
+                optim.step()
+                batch_loss.append(loss.detach())
+            training_loss.append(batch_loss)
+			if epochs % 1 == 0:
+				print('epoch ', epochs+1, ' loss = ', loss.detach())
+	def predict(self, test_data, learning_rate):
+        batch_loss = []
+		for i, data in enumerate(test_data, 0):
+            self.forward(data)
+            loss = self.loss()
+            batch_loss.append(loss.detach())
+        print('epoch ', epochs+1, ' loss = ', loss.detach())
 beta = 0.5 * torch.ones(5)
 eta = torch.ones(5)
 num_modal = 3
@@ -173,16 +138,16 @@ N = 1000
 # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
 model.forward(x)
 print(model.output)
-nes = model.nes
-d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
-num_observations = None
-d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
-output = model.output
-weights = list()
-nu = model.nu
-net = model.net
-learning_rate = 0.01
-n_iter = 1000
-train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
-test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
-x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+# nes = model.nes
+# d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
+# num_observations = None
+# d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
+# output = model.output
+# weights = list()
+# nu = model.nu
+# net = model.net
+# learning_rate = 0.01
+# n_iter = 1000
+# train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
+# test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
+# x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
