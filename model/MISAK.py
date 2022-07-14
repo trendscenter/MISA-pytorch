@@ -28,27 +28,31 @@ class MISA(nn.Module):
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
         self.nes = torch.ne(self.d, torch.zeros_like(self.d))
         # "NameError: name 'self' is not defined" despite passing through debugger
-        self.a = (torch.pow(self.lam, (-1/self.beta))) * gamma(self.nu + 1 / self.beta) / (self.d * gamma(self.nu))
+        self.a = (torch.pow(self.lam, (-1/self.beta))) * torch.lgamma(self.nu + 1 / self.beta) / (self.d * torch.lgamma(self.nu))
         self.d_k = [(torch.sum(self.subspace[i].int(), axis=1)).int() for i in range(len(self.subspace))]
         # Unsure if consistent to summing up "True" elements or if added "False" and was coincidential
         self.K = self.nes.sum()
+
     def seed(seed = None, seed_torch = True):
         if seed is None:
-			seed = torch.random.choice(2 ** 32)
-			random.seed(seed)
-			torch.random.seed(seed)
-  		if seed_torch:
-			torch.manual_seed(seed)
-			torch.cuda.manual_seed_all(seed)
-			torch.cuda.manual_seed(seed)
-			torch.backends.cudnn.benchmark = False
-			torch.backends.cudnn.deterministic = True
-	def seed_worker(worker_id):
-		worker_seed = torch.initial_seed() % 2**32
-		np.random.seed(worker_seed)
-		random.seed(worker_seed)
+            seed = torch.random.choice(2 ** 32)
+            random.seed(seed)
+            torch.random.seed(seed)
+        if seed_torch:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.benchmark = False
+            torch.backends.cudnn.deterministic = True
+
+    def seed_worker(worker_id):
+        worker_seed = torch.initial_seed() % 2**32
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
+
     def forward(self, x):
         self.output = [l(x[i]) if isinstance(l, nn.Linear) else None for i, l in enumerate(self.net)]
+
     def loss(self):
         JE = 0
         JF = 0
@@ -94,6 +98,7 @@ class MISA(nn.Module):
             for mm in range(self.index.stop)[self.index]:
                 # torch.tensor(MISAK.net).size()
                 [rr, cc] = torch.tensor(self.net[mm].weight).size()# state_dict()['parameters']).size()
+                # rr and cc are flipped
                 if rr == cc:
                     JD = JD - torch.log(torch.abs(torch.det(self.net[mm])))
                 else:
@@ -102,11 +107,12 @@ class MISA(nn.Module):
                     del D
         J = JE + JF + JC + JD + fc
         return J
+
     def training(self, train_data, learning_rate):
         optim = torch.optim.Adam(self.parameters, lr=learning_rate)
         training_loss = []
         batch_loss = []
-		for epochs in n_iter:
+        for epochs in n_iter:
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
                 self.forward(data)
@@ -115,11 +121,12 @@ class MISA(nn.Module):
                 optim.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
-			if epochs % 1 == 0:
-				print('epoch ', epochs+1, ' loss = ', loss.detach())
-	def predict(self, test_data, learning_rate):
+            if epochs % 1 == 0:
+                print('epoch ', epochs+1, ' loss = ', loss.detach())
+
+    def predict(self, test_data, learning_rate):
         batch_loss = []
-		for i, data in enumerate(test_data, 0):
+        for i, data in enumerate(test_data, 0):
             self.forward(data)
             loss = self.loss()
             batch_loss.append(loss.detach())
@@ -135,9 +142,11 @@ input_dim = [6, 6, 6]
 output_dim = [5, 5, 5]
 model = MISA(weights=list(), index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
 N = 1000
-# x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
 model.forward(x)
 print(model.output)
+loss = model.loss()
+print(loss)
 # nes = model.nes
 # d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
 # num_observations = None
