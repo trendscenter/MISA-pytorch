@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import random
+import scipy.io as sio
 
 class MISA(nn.Module):
     # Unknown default parameters, "weights = None" for optional weight modification
@@ -32,6 +33,10 @@ class MISA(nn.Module):
         self.d_k = [(torch.sum(self.subspace[i].int(), axis=1)).int() for i in range(len(self.subspace))]
         # Unsure if consistent to summing up "True" elements or if added "False" and was coincidential
         self.K = self.nes.sum()
+        if weights != []:
+            for mm in range(self.index.stop)[self.index]:
+                with torch.no_grad():
+                    self.net[mm].weights = torch.tensor(weights[mm])
 
     def seed(seed = None, seed_torch = True):
         if seed is None:
@@ -47,7 +52,7 @@ class MISA(nn.Module):
 
     def seed_worker(worker_id):
         worker_seed = torch.initial_seed() % 2**32
-        np.random.seed(worker_seed)
+        torch.random.seed(worker_seed)
         random.seed(worker_seed)
 
     def forward(self, x):
@@ -112,7 +117,7 @@ class MISA(nn.Module):
         optim = torch.optim.Adam(self.parameters, lr=learning_rate)
         training_loss = []
         batch_loss = []
-        for epochs in n_iter:
+        for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
                 self.forward(data)
@@ -130,33 +135,37 @@ class MISA(nn.Module):
             self.forward(data)
             loss = self.loss()
             batch_loss.append(loss.detach())
-        print('epoch ', epochs+1, ' loss = ', loss.detach())
-beta = 0.5 * torch.ones(5)
-eta = torch.ones(5)
-num_modal = 3
-index = slice(0, num_modal)  # [i for i in range(num_modal)]
-# Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
-subspace = [torch.eye(5) for _ in range(num_modal)]
-lam = torch.ones(5)
-input_dim = [6, 6, 6]
-output_dim = [5, 5, 5]
-model = MISA(weights=list(), index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
-N = 1000
-x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
-model.forward(x)
-print(model.output)
-loss = model.loss()
-print(loss)
-# nes = model.nes
-# d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
-# num_observations = None
-# d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
-# output = model.output
-# weights = list()
-# nu = model.nu
-# net = model.net
-# learning_rate = 0.01
-# n_iter = 1000
-# train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
-# test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
-# x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+        # print('epoch ', epochs+1, ' loss = ', loss.detach())
+
+if __name__ == "__main__":
+    sio.loadmat
+    beta = 0.5 * torch.ones(5)
+    eta = torch.ones(5)
+    num_modal = 3
+    index = slice(0, num_modal)  # [i for i in range(num_modal)]
+    # Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
+    subspace = [torch.eye(5) for _ in range(num_modal)]
+    lam = torch.ones(5)
+    input_dim = [6, 6, 6]
+    output_dim = [5, 5, 5]
+    w = [torch.tensor(sio.loadmat("simulation_data/w0.mat")['W0'].squeeze()[i]) for i in range(len(sio.loadmat("simulation_data/w0.mat")['W0'].squeeze()))]
+    model = MISA(weights=list(), index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
+    N = 1000
+    x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+    model.forward(x)
+    print(model.output)
+    loss = model.loss()
+    print(loss)
+    # nes = model.nes
+    # d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
+    # num_observations = None
+    # d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
+    # output = model.output
+    # weights = list()
+    # nu = model.nu
+    # net = model.net
+    # learning_rate = 0.01
+    n_iter = 1000
+    # train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
+    # test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
+    # x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
