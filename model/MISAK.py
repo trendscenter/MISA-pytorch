@@ -113,7 +113,7 @@ class MISA(nn.Module):
         J = JE + JF + JC + JD + fc
         return J
 
-    def training(self, train_data, learning_rate):
+    def training(self, train_data, n_iter, learning_rate):
         optim = torch.optim.Adam(self.parameters, lr=learning_rate)
         training_loss = []
         batch_loss = []
@@ -149,26 +149,26 @@ if __name__ == "__main__":
     input_dim = [3, 3, 3]
     output_dim = [5, 5, 5]
     W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
-    w = [torch.tensor(np.float32(W0_mat[i])) for i in range(len(W0_mat))]
+    w = [torch.tensor(np.float32(W0_mat[i].T)) for i in range(len(W0_mat))]
     model = MISA(weights=w, index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
     N = 1000
     X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
-    x = [torch.tensor(np.float32(X_mat[i])) for i in range(len(X_mat))]
+    x = [torch.tensor(np.float32(X_mat[i].T)) for i in range(len(X_mat))]
     # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
     model.forward(x)
     print(model.output)
     loss = model.loss()
     print(loss)
+    
+    # n_iter = 1000
+    # learning_rate = 0.01
+    # model.training(x, n_iter, learning_rate)
+    
     # nes = model.nes
     # d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
     # num_observations = None
     # d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
     # output = model.output
-    # weights = list()
-    # nu = model.nu
-    # net = model.net
-    # learning_rate = 0.01
-    n_iter = 1000
     # train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
     # test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
     # x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
