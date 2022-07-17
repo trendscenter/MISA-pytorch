@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import random
+import numpy as np
 import scipy.io as sio
 
 class MISA(nn.Module):
@@ -79,7 +80,6 @@ class MISA(nn.Module):
                 tot = tot + self.d_k[mm][kk].int()
             # torch.Tensor.detach(y_sub.T @ y_sub).numpy()
             yyT = y_sub.T @ y_sub
-            # import pdb; pdb.set_trace()
             g_k = torch.pow(torch.diag(yyT), -.5)
             g2_k = torch.pow(torch.diag(yyT), -1)
             g_kInv = torch.pow(torch.diag(yyT), .5)
@@ -107,7 +107,7 @@ class MISA(nn.Module):
                 if rr == cc:
                     JD = JD - torch.log(torch.abs(torch.det(self.net[mm])))
                 else:
-                    D = torch.linalg.eig(self.net[mm] * self.net.T[mm])[0]
+                    D = torch.linalg.eig(self.net[mm].weights * self.net[mm].weights.T)[0]
                     JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
                     del D
         J = JE + JF + JC + JD + fc
@@ -138,20 +138,23 @@ class MISA(nn.Module):
         # print('epoch ', epochs+1, ' loss = ', loss.detach())
 
 if __name__ == "__main__":
-    sio.loadmat
-    beta = 0.5 * torch.ones(5)
-    eta = torch.ones(5)
     num_modal = 3
     index = slice(0, num_modal)  # [i for i in range(num_modal)]
     # Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
-    subspace = [torch.eye(5) for _ in range(num_modal)]
-    lam = torch.ones(5)
-    input_dim = [6, 6, 6]
+    K = 5 # number of subspaces
+    subspace = [torch.eye(K) for _ in range(num_modal)]
+    beta = 0.5 * torch.ones(K)
+    eta = torch.ones(K)
+    lam = torch.ones(K)
+    input_dim = [3, 3, 3]
     output_dim = [5, 5, 5]
-    w = [torch.tensor(sio.loadmat("simulation_data/w0.mat")['W0'].squeeze()[i]) for i in range(len(sio.loadmat("simulation_data/w0.mat")['W0'].squeeze()))]
-    model = MISA(weights=list(), index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
+    W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
+    w = [torch.tensor(np.float32(W0_mat[i])) for i in range(len(W0_mat))]
+    model = MISA(weights=w, index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
     N = 1000
-    x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+    X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
+    x = [torch.tensor(np.float32(X_mat[i])) for i in range(len(X_mat))]
+    # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
     model.forward(x)
     print(model.output)
     loss = model.loss()
