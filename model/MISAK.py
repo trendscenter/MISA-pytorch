@@ -22,8 +22,12 @@ class MISA(nn.Module):
         self.eta = eta  # eta
         self.lam = lam  # lambda
         self.nu = nu
-        self.input_dim = input_dim
-        self.output_dim = output_dim
+        if weights != []:
+            self.input_dim = [weights[i].size(0) for i in range(len(weights))]
+            self.output_dim = [weights[i].size(1) for i in range(len(weights))]
+        else:
+            self.input_dim = input_dim
+            self.output_dim = output_dim
         self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i]) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0), why the ".stop" add on? What are the dimensions of this layer exactly?
         self.output = list()
         self.num_observations = None
@@ -37,7 +41,7 @@ class MISA(nn.Module):
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weights = torch.tensor(weights[mm])
+                    self.net[mm].weights = weights[mm] # Difference between "weight" and "weights", has to be "weights" to work with copying from "weights" variable, most likely need to go back and change some variables from "weight" to "weights"
 
     def seed(seed = None, seed_torch = True):
         if seed is None:
@@ -102,12 +106,12 @@ class MISA(nn.Module):
             # insert gradient descent here
             for mm in range(self.index.stop)[self.index]:
                 # torch.tensor(MISAK.net).size()
-                [rr, cc] = torch.tensor(self.net[mm].weight).size()# state_dict()['parameters']).size()
+                cc,rr = self.net[mm].weights.size()# state_dict()['parameters']).size()
                 # rr and cc are flipped
                 if rr == cc:
-                    JD = JD - torch.log(torch.abs(torch.det(self.net[mm])))
+                    JD = JD - torch.log(torch.abs(torch.det(self.net[mm].weights.T)))
                 else:
-                    D = torch.linalg.eig(self.net[mm].weights * self.net[mm].weights.T)[0]
+                    D = torch.linalg.eig(self.net[mm].weights.T * self.net[mm].weights)[0]
                     JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
                     del D
         J = JE + JF + JC + JD + fc
@@ -138,23 +142,24 @@ class MISA(nn.Module):
         # print('epoch ', epochs+1, ' loss = ', loss.detach())
 
 if __name__ == "__main__":
-    num_modal = 3
-    index = slice(0, num_modal)  # [i for i in range(num_modal)]
+    X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
+    x = [torch.tensor(np.float32(X_mat[i].T)) for i in range(len(X_mat))]
+    N = x[0].size(0)
+    # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+    num_modal = len(x)
+    index = slice(0, num_modal) # [i for i in range(num_modal)]
+    W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
+    w = [torch.tensor(np.float32(W0_mat[i].T)) for i in range(len(W0_mat))]
+    # input_dim = [3, 3, 3]
+    # output_dim = [5, 5, 5]
     # Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
-    K = 5 # number of subspaces
+    K = w[0].size(1) # number of subspaces
     subspace = [torch.eye(K) for _ in range(num_modal)]
     beta = 0.5 * torch.ones(K)
     eta = torch.ones(K)
     lam = torch.ones(K)
-    input_dim = [3, 3, 3]
-    output_dim = [5, 5, 5]
-    W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
-    w = [torch.tensor(np.float32(W0_mat[i].T)) for i in range(len(W0_mat))]
-    model = MISA(weights=w, index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=input_dim, output_dim=output_dim)
-    N = 1000
-    X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
-    x = [torch.tensor(np.float32(X_mat[i].T)) for i in range(len(X_mat))]
-    # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
+    model = MISA(weights=w, index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=[], output_dim=[])
+    
     model.forward(x)
     print(model.output)
     loss = model.loss()
