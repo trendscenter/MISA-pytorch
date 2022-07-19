@@ -41,7 +41,7 @@ class MISA(nn.Module):
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weights = weights[mm] # Difference between "weight" and "weights", has to be "weights" to work with copying from "weights" variable, most likely need to go back and change some variables from "weight" to "weights"
+                    self.net[mm].weight.copy_(weights[mm]) # Difference between "weight" and "weights", has to be "weights" to work with copying from "weights" variable, most likely need to go back and change some variables from "weight" to "weights"
 
     def seed(seed = None, seed_torch = True):
         if seed is None:
@@ -99,21 +99,21 @@ class MISA(nn.Module):
                 JF = JF + (1-self.eta[kk]) * torch.mean(torch.log(z_k))
             # JC = JC + torch.sum(torch.log(torch.tensor([np.linalg.eig(np.isnan(g_k * yyT * g_k)))[i] for i in range(len(np.isnan(torch.Tensor.detach(g_k).numpy() * (torch.Tensor.detach(yyT).numpy() * torch.Tensor.detach(g_k).numpy()))) - 2)])))
             # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
-            JC = JC + torch.sum(torch.log(torch.linalg.eig(g_k[:, None] * (yyT * g_k[None, :]))[0]))
+            JC = JC + torch.sum(torch.log(torch.linalg.eigvalsh(g_k[:, None] * (yyT * g_k[None, :]))))
             # insert gradient descent here
             JC = JC / 2
             fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
             # insert gradient descent here
             for mm in range(self.index.stop)[self.index]:
                 # torch.tensor(MISAK.net).size()
-                cc,rr = self.net[mm].weights.size()# state_dict()['parameters']).size()
+                cc,rr = self.net[mm].weight.size()# state_dict()['parameters']).size()
                 # rr and cc are flipped
                 if rr == cc:
-                    JD = JD - torch.log(torch.abs(torch.det(self.net[mm].weights.T)))
+                    JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1] #torch.log(torch.abs(torch.det(self.net[mm].weight)))
                 else:
-                    D = torch.linalg.eig(self.net[mm].weights.T * self.net[mm].weights)[0]
+                    # D = torch.linalg.eigh(self.net[mm].weight.T @ self.net[mm].weight)[0]
+                    D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
                     JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
-                    del D
         J = JE + JF + JC + JD + fc
         return J
 
