@@ -133,7 +133,7 @@ class MISA(nn.Module):
             if epochs % 1 == 0:
                 print('epoch ', epochs+1, ' loss = ', loss.detach())
 
-    def predict(self, test_data, learning_rate):
+    def predict(self, test_data):
         batch_loss = []
         for i, data in enumerate(test_data, 0):
             self.forward(data)
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     print(model.output)
     loss = model.loss()
     print(loss)
-    model.training()
+    model.training(train_data, n_iter, learning_rate)
     # n_iter = 1000
     # learning_rate = 0.01
     # model.training(x, n_iter, learning_rate)
