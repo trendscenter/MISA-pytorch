@@ -165,7 +165,7 @@ if __name__ == "__main__":
     print(model.output)
     loss = model.loss()
     print(loss)
-    
+    model.training()
     # n_iter = 1000
     # learning_rate = 0.01
     # model.training(x, n_iter, learning_rate)
