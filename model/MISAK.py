@@ -109,8 +109,7 @@ class MISA(nn.Module):
             cc,rr = self.net[mm].weight.size()# state_dict()['parameters']).size()
             # rr and cc are flipped
             if rr == cc:
-                JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1]
-                print(torch.linalg.slogdet(self.net[mm].weight)[1]) #torch.log(torch.abs(torch.det(self.net[mm].weight)))
+                JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1] #torch.log(torch.abs(torch.det(self.net[mm].weight)))
             else:
                 # D = torch.linalg.eigh(self.net[mm].weight.T @ self.net[mm].weight)[0]
                 D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
@@ -137,7 +136,7 @@ class MISA(nn.Module):
                 print('epoch ', epochs+1, ' loss = ', loss.detach())
                 scheduler.print_lr()
 
-    def predict(self, test_data, learning_rate):
+    def predict(self, test_data):
         batch_loss = []
         for i, data in enumerate(test_data, 0):
             self.forward(data)
@@ -168,7 +167,7 @@ if __name__ == "__main__":
     print(model.output)
     loss = model.loss()
     print(loss)
-    model.training()
+    model.training(train_data, n_iter, learning_rate)
     # n_iter = 1000
     # learning_rate = 0.01
     # model.training(x, n_iter, learning_rate)
