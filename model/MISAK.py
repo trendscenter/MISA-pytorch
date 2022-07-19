@@ -6,7 +6,7 @@ import scipy.io as sio
 
 class MISA(nn.Module):
     # Unknown default parameters, "weights = None" for optional weight modification
-    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list()):
+    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias = False):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
         # Setting arguments/filters
@@ -28,7 +28,7 @@ class MISA(nn.Module):
         else:
             self.input_dim = input_dim
             self.output_dim = output_dim
-        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i]) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0), why the ".stop" add on? What are the dimensions of this layer exactly?
+        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i], bias = bias) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0), why the ".stop" add on? What are the dimensions of this layer exactly?
         self.output = list()
         self.num_observations = None
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
@@ -101,19 +101,20 @@ class MISA(nn.Module):
             # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
             JC = JC + torch.sum(torch.log(torch.linalg.eigvalsh(g_k[:, None] * (yyT * g_k[None, :]))))
             # insert gradient descent here
-            JC = JC / 2
-            fc = 0.5 * torch.log(torch.tensor(torch.pi)) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
+        JC = JC / 2
+        fc = 0.5 * torch.log(torch.tensor(torch.pi)) * torch.sum(self.d) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
             # insert gradient descent here
-            for mm in range(self.index.stop)[self.index]:
-                # torch.tensor(MISAK.net).size()
-                cc,rr = self.net[mm].weight.size()# state_dict()['parameters']).size()
-                # rr and cc are flipped
-                if rr == cc:
-                    JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1] #torch.log(torch.abs(torch.det(self.net[mm].weight)))
-                else:
-                    # D = torch.linalg.eigh(self.net[mm].weight.T @ self.net[mm].weight)[0]
-                    D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
-                    JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
+        for mm in range(self.index.stop)[self.index]:
+            # torch.tensor(MISAK.net).size()
+            cc,rr = self.net[mm].weight.size()# state_dict()['parameters']).size()
+            # rr and cc are flipped
+            if rr == cc:
+                JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1]
+                print(torch.linalg.slogdet(self.net[mm].weight)[1]) #torch.log(torch.abs(torch.det(self.net[mm].weight)))
+            else:
+                # D = torch.linalg.eigh(self.net[mm].weight.T @ self.net[mm].weight)[0]
+                D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
+                JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
         J = JE + JF + JC + JD + fc
         return J
 
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     num_modal = len(x)
     index = slice(0, num_modal) # [i for i in range(num_modal)]
     W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
-    w = [torch.tensor(np.float32(W0_mat[i].T)) for i in range(len(W0_mat))]
+    w = [torch.tensor(np.float32(W0_mat[i])) for i in range(len(W0_mat))]
     # input_dim = [3, 3, 3]
     # output_dim = [5, 5, 5]
     # Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
