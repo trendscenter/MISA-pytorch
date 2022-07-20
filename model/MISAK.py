@@ -118,9 +118,10 @@ class MISA(nn.Module):
         return J
 
     def training(self, train_data, n_iter, learning_rate):
-        optim = torch.optim.Adam(self.parameters, lr=learning_rate)
+        optim = torch.optim.Adam(self.parameters, lr = learning_rate)
         training_loss = []
         batch_loss = []
+        scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=30, gamma=0.1, last_epoch = -1, verbose = False) # Presented parameters for future use, possibly will be presented in seperate file
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -128,10 +129,12 @@ class MISA(nn.Module):
                 loss = self.loss()
                 loss.backward()
                 optim.step()
+                scheduler.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
             if epochs % 1 == 0:
                 print('epoch ', epochs+1, ' loss = ', loss.detach())
+                scheduler.print_lr()
 
     def predict(self, test_data):
         batch_loss = []
