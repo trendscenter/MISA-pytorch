@@ -1,89 +1,45 @@
 import os, sys
-import torch
-import torch.utils.data as data
 import numpy as np
 import nibabel as nib
+import torch
+import torch.utils.data as data
+import scipy.io as sio
 
 class Dataset(data.Dataset):
     def __init__(self,
-        smri_in=None,
-        fmri_in=None,
-        dmri_in=None,
-        debug=True
-                ):
+        data_in=None,
+        num_modal=3):
         super(Dataset, self).__init__()
 
-        # sMRI
-        self.smri_in=smri_in
-        if isinstance(smri_in, type(None)):
-            self.smri_dir=None
-            self.smri_files=None
-        else:
-            if isinstance(smri_in, str) and os.path.isdir(smri_in):
-                self.smri_dir=smri_in
-                self.smri_files=os.listdir(smri_in)
-                self.smri_files.sort()
-            elif isinstance(smri_in, str) and os.path.isfile(smri_in):
-                smri_dir, smri_file=os.path.split(smri_in)
-                self.smri_dir=smri_dir
-                self.smri_files=[smri_file]
-            else:
-                print("Invalid smri_in")
-                sys.exit(1)
+        self.data_in=data_in
+        self.num_modal=num_modal
+        self.mat_data=[]
 
-        # fMRI
-        self.fmri_in=fmri_in
-        if isinstance(fmri_in, type(None)):
-            self.fmri_dir=None
-            self.fmri_files=None
+        if isinstance(data_in, type(None)):
+            self.data_dir=None
+            self.data_files=None
         else:
-            if isinstance(fmri_in, str) and os.path.isdir(fmri_in):
-                self.fmri_dir=fmri_in
-                self.fmri_files=os.listdir(fmri_in)
-                self.fmri_files.sort()
-            elif isinstance(fmri_in, str) and os.path.isfile(fmri_in):
-                fmri_dir, fmri_file=os.path.split(fmri_in)
-                self.fmri_dir=fmri_dir
-                self.fmri_files=[fmri_file]
+            if isinstance(data_in, str) and os.path.isdir(data_in):
+                self.data_dir=data_in
+                self.data_files=os.listdir(data_in)
+                self.data_files.sort()
+            elif isinstance(data_in, str) and os.path.isfile(data_in):
+                data_dir, data_file=os.path.split(data_in)
+                self.data_dir=data_dir
+                self.data_files=[data_file]
+                if '.mat' in data_file:
+                    self.mat_data=[i.T for _, i in enumerate(np.squeeze(sio.loadmat(self.data_in)['X']))] # (3,); mat_data[0]: (16,20k)
+                    self.num_modal=len(self.mat_data)
             else:
-                print("Invalid fmri_in")
+                print("Invalid data_in")
                 sys.exit(1)
-
-        # dMRI
-        self.dmri_in=dmri_in
-        if isinstance(dmri_in, type(None)):
-            self.dmri_dir=None
-            self.dmri_files=None
-        else:
-            if isinstance(dmri_in, str) and os.path.isdir(dmri_in):
-                self.dmri_dir=dmri_in
-                self.dmri_files=os.listdir(dmri_in)
-                self.dmri_files.sort()
-            elif isinstance(dmri_in, str) and os.path.isfile(dmri_in):
-                dmri_dir, dmri_file=os.path.split(dmri_in)
-                self.dmri_dir=dmri_dir
-                self.dmri_files=[dmri_file]
-            else:
-                print("Invalid dmri_in")
-                sys.exit(1)
-
-        self.current_smri_nii=None
-        self.current_fmri_nii=None
-        self.current_dmri_nii=None
-        self.debug=debug
 
     def __len__(self):
-        return len(self.smri_files)
+        if self.mat_data != []:
+            return self.mat_data[0].shape[0]
+        return len(self.data_files)
 
     def __getitem__(self, index):
-        if self.debug:
-            if isinstance(self.smri_files, list):
-                print(self.smri_files[index])
-            if isinstance(self.fmri_files, list):
-                print(self.fmri_files[index])
-            if isinstance(self.dmri_files, list):
-                print(self.dmri_files[index])
-
         def load_nii(mri_dir, mri_file):
             mri_nii=nib.load(os.path.join(mri_dir, mri_file))
             mri=np.array(mri_nii.get_fdata(), dtype=np.float32)
@@ -91,38 +47,23 @@ class Dataset(data.Dataset):
             # mri=(mri-mri.min())/(mri.max()-mri.min())
             mri=torch.from_numpy(mri)
             return mri_nii, mri
-        
-        Out=list()
-        if isinstance(self.smri_files, list):
-            smri_nii, smri=load_nii(self.smri_dir, self.smri_files[index])
-            Out.append(smri)
-            self.current_smri_nii=smri_nii
 
-        if isinstance(self.fmri_files, list):
-            fmri_nii, fmri=load_nii(self.fmri_dir, self.fmri_files[index])
-            Out.append(fmri)
-            self.current_fmri_nii=fmri_nii
-
-        if isinstance(self.dmri_files, list):
-            dmri_nii, dmri=load_nii(self.dmri_dir, self.dmri_files[index])
-            Out.append(dmri)
-            self.current_dmri_nii=dmri_nii
-
-        if len(Out)==1:
-            Out=Out[0]
+        data_out=list()
+        if self.mat_data == []:
+            # .nii file
+            _, mri=load_nii(self.data_dir, self.data_files[index])
+            data_out.append(mri)
         else:
-            Out=tuple(Out)
-        
-        return Out
+            # .mat file
+            for i in range(self.num_modal):
+                data_out.append(torch.from_numpy(self.mat_data[i][index,:]))
 
+        return data_out
 
 if __name__ == '__main__':
-    # dataset should return a list of M tensors (M is number of modality)
-    # TODO 
-    # check how to label tensor
-    # remove voxel-wise mean across subjects
-    rootpath="/Users/xli77/Documents/data"
-    ds=Dataset(smri_in=os.path.join(rootpath,"smri"), fmri_in=os.path.join(rootpath,"fmri"), dmri_in=os.path.join(rootpath,"dmri"))
-    dl=data.DataLoader(dataset=ds, batch_size=1, shuffle=True)
-    for i, (smri_in, fmri_in, dmri_in) in enumerate(dl):
-        print(smri_in.shape, fmri_in.shape, dmri_in.shape)
+    rootpath="/Users/xli77/Documents/MISA-pytorch/simulation_data"
+    ds=Dataset(data_in=os.path.join(rootpath,"sim_siva.mat"))
+    dl=data.DataLoader(dataset=ds, batch_size=1000, shuffle=True)
+    for i, data_in in enumerate(dl):
+        # import pdb; pdb.set_trace()
+        print(len(data_in), data_in[0].shape)
