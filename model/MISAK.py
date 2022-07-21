@@ -162,7 +162,7 @@ if __name__ == "__main__":
     eta = torch.ones(K)
     lam = torch.ones(K)
     model = MISA(weights=w, index=index, subspace=subspace, beta=beta, eta=eta, lam=lam, input_dim=[], output_dim=[])
-    
+    model.cuda()
     model.forward(x)
     print(model.output)
     loss = model.loss()
