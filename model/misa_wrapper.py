@@ -5,8 +5,20 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-import .model.MISAK MISA
+from model.MISAK import MISA
 
-def MISA_wrapper(latent_dim, n_layers, lr, seed,
-                 ckpt_file='misa.pt', test=False):
-    model = MISA(weights = list(), index = index, subspace = subspace, beta = beta, eta = eta, lam = lam, input_dim = input_dim, output_dim = output_dim)
+def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output_dim, epochs, lr, seed,
+                 weights = list(), ckpt_file='misa.pt', test=False):
+    model = MISA(weights = weights,
+                 index = index, 
+                 subspace = subspace, 
+                 eta = eta, 
+                 beta = beta, 
+                 lam = lam, 
+                 input_dim = input_dim, 
+                 output_dim = output_dim,
+                 seed = seed)
+    if not test:
+        model.training(data_loader, epochs, lr)
+    else:
+        model.predict(data_loader)

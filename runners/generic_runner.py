@@ -16,16 +16,20 @@ def run_misa(args, config):
     #     if mask_name.lower() in ['simtb16']:
     #         data_seed = config.data_seed
     #     elif mask_name.lower() in ['ukb2907-smri-aal2']:
-    if 'data_dim' in config:
-        data_dim = config.data_dim
-    if 'latent_dim' in config:
-        latent_dim = config.latent_dim
-    elif 'data_dim' in config:
-        latent_dim = config.data_dim
+    if 'input_dim' in config:
+        input_dim = config.input_dim
+
+    if 'output_dim' in config:
+        output_dim = config.output_dim
+    elif 'input_dim' in config:
+        output_dim = config.input_dim
+
+    if 'subspace' in config:
     
     
 
     lr = config.special.lr
+    epochs = config.special.epochs
     
 
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
@@ -41,10 +45,15 @@ def run_misa(args, config):
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
+        
+        num_modal = len(x)
+        index = slice(0, num_modal)
 
+        train_data = DataLoader("Insert parameters here", lr = lr, shuffle = True)
+        
         # load ground-truth sources for comparison
         # s = ...
-        pass
+        
     else:
         if mask_name.lower() in ['simtb16']:
             pass
@@ -58,8 +67,12 @@ def run_misa(args, config):
             ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
-        recov_sources = MISA_wrapper(latent_dim=latent_dim, 
+        recov_sources = MISA_wrapper(data_loader=train_data,
+                                    index = index,
                                     n_layers=n_layers,
+                                    input_dim=input_dim, 
+                                    output_dim=output_dim, 
+                                    epochs=epochs,
                                     lr=lr,
                                     seed=seed,
                                     ckpt_file=ckpt_file,
@@ -80,7 +93,7 @@ def run_misa(args, config):
     if data.lower() == 'mat':
         pass
         Results = {
-            # 'data_dim': data_dim,
+            # 'input_dim': input_dim,
             # 'CorrelationCoef': results,
             'recovered_sources': recovered_sources
         }
