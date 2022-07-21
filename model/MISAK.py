@@ -6,13 +6,13 @@ import scipy.io as sio
 
 class MISA(nn.Module):
     # Unknown default parameters, "weights = None" for optional weight modification
-    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias = False):
+    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias = False, seed = 0):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
         # Setting arguments/filters
+        assert torch.all(torch.gt(eta, (2-torch.sum(torch.cat(subspace[index], axis=1), axis=1))/2)).item(), "All eta parameters should be lagerer than (2-d)/2."
         assert torch.all(torch.gt(beta, torch.zeros_like(beta))).item(), "All beta parameters should be positive"  # Boolean operations in torch
         assert torch.all(torch.gt(lam, torch.zeros_like(lam))).item(), "All lambda parameters should be positive"
-        assert torch.all(torch.gt(eta, (2-torch.sum(torch.cat(subspace[index], axis=1), axis=1))/2)).item(), "All eta parameters should be lagerer than (2-d)/2."
         nu = (2*eta + torch.sum(torch.cat(subspace[index], axis=1), dim=1) - 2)/(2*beta)
         assert torch.all(torch.gt(nu, torch.zeros_like(nu))).item(), "All nu parameter derived from eta and d should be positive."
         # Defining variables
@@ -117,11 +117,11 @@ class MISA(nn.Module):
         J = JE + JF + JC + JD + fc
         return J
 
-    def training(self, train_data, n_iter, learning_rate):
-        optim = torch.optim.Adam(self.parameters, lr = learning_rate)
+    def train_me(self, train_data, n_iter, learning_rate):
+        optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
         training_loss = []
         batch_loss = []
-        scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=30, gamma=0.1, last_epoch = -1, verbose = False) # Presented parameters for future use, possibly will be presented in seperate file
+        # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=30, gamma=0.1, last_epoch = -1, verbose = False) # Presented parameters for future use, possibly will be presented in seperate file
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -129,12 +129,12 @@ class MISA(nn.Module):
                 loss = self.loss()
                 loss.backward()
                 optim.step()
-                scheduler.step()
+                # scheduler.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
             if epochs % 1 == 0:
                 print('epoch ', epochs+1, ' loss = ', loss.detach())
-                scheduler.print_lr()
+                # scheduler.print_lr()
 
     def predict(self, test_data):
         batch_loss = []
