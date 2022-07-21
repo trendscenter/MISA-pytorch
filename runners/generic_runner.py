@@ -5,7 +5,7 @@ import numpy as np
 
 # from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
-
+from dataset.dataset import Dataset
 
 
 def run_misa(args, config):
@@ -45,15 +45,15 @@ def run_misa(args, config):
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
-        
         num_modal = len(x)
         index = slice(0, num_modal)
-
-        train_data = DataLoader("Insert parameters here", lr = lr, shuffle = True)
         
+        kpt_file = os.path.join('./simulation_data', '{}.mat'.format(config.dataset))
+        ds=Dataset(data_in=kpt_file)
+        train_data=data.DataLoader(dataset=ds, batch_size=10, shuffle=True)
         # load ground-truth sources for comparison
         # s = ...
-        
+        # pass
     else:
         if mask_name.lower() in ['simtb16']:
             pass
