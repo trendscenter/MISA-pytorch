@@ -6,11 +6,18 @@ import numpy as np
 # from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
 from dataset.dataset import Dataset
-
+from torch.utils.data import DataLoader
+import torch
 
 def run_misa(args, config):
     """run MISA"""
-    n_layers = config.n_layers
+
+    # From args:
+    data = args.data
+    test = args.test
+    
+    # From config:
+    device = config.device
     # if 'mask_name' in config:
     #     mask_name = config.mask_name
     #     if mask_name.lower() in ['simtb16']:
@@ -25,18 +32,25 @@ def run_misa(args, config):
         output_dim = config.input_dim
 
     if 'subspace' in config:
-    
-    
+        subspace = config.subspace
+    else:
+        pass # TO DO: should error...
 
-    lr = config.special.lr
+    if 'eta' in config:
+        eta = config.eta
+    
+    if 'beta' in config:
+        beta = config.beta
+
+    if 'lam' in config:
+        lam = config.lam
+
+    nRuns = config.special.nRuns
     epochs = config.special.epochs
+    batch_size = config.special.batch_size
+    lr = config.special.lr
     
-
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
-
-    data = args.data
-    nRuns = config.nRuns
-    test = args.test
 
     # recovered_sources = {l: {n: [] for n in data_seed} for l in n_layers}
     recovered_sources = []
@@ -45,12 +59,41 @@ def run_misa(args, config):
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
-        num_modal = len(x)
+        matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        ds=Dataset(data_in=matfile)
+        train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
+        
+        num_modal = ds.num_modal
         index = slice(0, num_modal)
         
-        kpt_file = os.path.join('./simulation_data', '{}.mat'.format(config.dataset))
-        ds=Dataset(data_in=kpt_file)
-        train_data=data.DataLoader(dataset=ds, batch_size=10, shuffle=True)
+        input_dim = [torch.tensor(dd.shape[-1],device=device) for dd in ds.mat_data]
+        # TO DO: should NOT assume output_dim = input_dim
+        output_dim = input_dim
+        
+        if subspace.lower() == 'iva':
+            subspace = [torch.eye(dd, device=device) for dd in input_dim]
+        
+        if len(eta) > 0:
+            eta = torch.tensor(eta, dtype=torch.float32, device=device)
+            if len(eta) == 1:
+                eta = eta*torch.ones(subspace[0].size(-2), device=device)
+        else:
+            # should error
+            pass
+        if len(beta) > 0:
+            beta = torch.tensor(beta, dtype=torch.float32, device=device)
+            if len(beta) == 1:
+                beta = beta*torch.ones(subspace[0].size(-2), device=device)
+        else:
+            # should error
+            pass
+        if len(lam) > 0:
+            lam = torch.tensor(lam, dtype=torch.float32, device=device)
+            if len(lam) == 1:
+                lam = lam*torch.ones(subspace[0].size(-2), device=device)
+        else:
+            # should error
+            pass
         # load ground-truth sources for comparison
         # s = ...
         # pass
@@ -68,15 +111,19 @@ def run_misa(args, config):
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
         recov_sources = MISA_wrapper(data_loader=train_data,
-                                    index = index,
-                                    n_layers=n_layers,
-                                    input_dim=input_dim, 
-                                    output_dim=output_dim, 
-                                    epochs=epochs,
-                                    lr=lr,
-                                    seed=seed,
-                                    ckpt_file=ckpt_file,
-                                    test=test)
+                                     index=index,
+                                     subspace=subspace, 
+                                     eta=eta, 
+                                     beta=beta, 
+                                     lam=lam,
+                                     input_dim=input_dim, 
+                                     output_dim=output_dim, 
+                                     seed=seed,
+                                     epochs=epochs,
+                                     lr=lr,
+                                     device=device,
+                                     ckpt_file=ckpt_file,
+                                     test=test)
         
         
         # store results

@@ -1,4 +1,4 @@
-dataset: "iva-3x16"
+dataset: "siva"
 # mask_name: 'ukb2907-smri-aal2'
 subspace: "iva" # [2,4]
 eta: [1]
@@ -9,6 +9,6 @@ output_dim: [14, 14, 14]
 
 special:
   nRuns: 1
-  epochs: 7000
+  epochs: 300
   batch_size: 1000
   lr: 0.001

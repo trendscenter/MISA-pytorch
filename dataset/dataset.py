@@ -6,13 +6,12 @@ import torch.utils.data as data
 import scipy.io as sio
 
 class Dataset(data.Dataset):
-    def __init__(self,
-        data_in=None,
-        num_modal=3):
+    def __init__(self, data_in=None, num_modal=3, device='cpu'):
         super(Dataset, self).__init__()
 
         self.data_in=data_in
         self.num_modal=num_modal
+        self.device = device
         self.mat_data=[]
 
         if isinstance(data_in, type(None)):
@@ -56,7 +55,7 @@ class Dataset(data.Dataset):
         else:
             # .mat file
             for i in range(self.num_modal):
-                data_out.append(torch.from_numpy(self.mat_data[i][index,:]))
+                data_out.append(torch.tensor(self.mat_data[i][index,:], dtype=torch.float32, device=self.device))
 
         return data_out
 
