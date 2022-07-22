@@ -1,0 +1,28 @@
+/var/spool/slurmd/parana/job6172023/slurm_script: line 20: /home/users/ga20055/anaconda3/bin/activate: Permission denied
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+Traceback (most recent call last):
+  File "main.py", line 1, in <module>
+    from fusion.experiment import Experiment
+  File "/data/users1/xinhui/fusion/fusion/experiment/__init__.py", line 1, in <module>
+    from .experiment import Experiment
+  File "/data/users1/xinhui/fusion/fusion/experiment/experiment.py", line 1, in <module>
+    from omegaconf import DictConfig, OmegaConf
+ModuleNotFoundError: No module named 'omegaconf'
