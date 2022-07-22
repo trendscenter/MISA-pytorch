@@ -10,6 +10,15 @@ from torch.utils.data import DataLoader
 import torch
 from scipy.stats import loguniform
 
+class loguniform_int:
+    """Integer valued version of the log-uniform distribution"""
+    def __init__(self, a, b):
+        self._distribution = loguniform(a, b)
+
+    def rvs(self, *args, **kwargs):
+        """Random variable sample"""
+        return self._distribution.rvs(*args, **kwargs).astype(int)
+
 def run_misa(args, config):
     """run MISA"""
 
@@ -46,22 +55,28 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    nRuns = config.special.nRuns
+    if config.special.nRuns != []:
+        nRuns = config.special.nRuns
+    else:
+        nRuns = loguniform_int(0, 10).rvs(size=1)[0]
     
-    if config.special.epochs == []:
+    if config.special.epochs != []:
         epochs = config.special.epochs
     else:
-        epochs = loguniform.rvs(0.00001, 10, size=1)
-    
-    if config.special.batch_size == []:
+        # the integer type returned by loguniform_int is int64, 
+        # which can't recognized as an int in DataLoader,
+        # so need to cast int64 to int here
+        epochs = int(loguniform_int(100, 500).rvs(size=1)[0])
+
+    if config.special.batch_size != []:
         batch_size = config.special.batch_size
     else:
-        batch_size = loguniform.rvs(0.00001, 10, size=1)
+        batch_size = int(loguniform_int(10, 10000).rvs(size=1)[0])
     
-    if config.special.lr == []:
+    if config.special.lr != []:
         lr = config.special.lr
     else:
-        lr = loguniform.rvs(0.00001, 10, size=1)
+        lr = loguniform.rvs(0.00001, 0.1, size=1)[0]
     
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
 
@@ -73,7 +88,7 @@ def run_misa(args, config):
     if data.lower() == 'mat':
         # load the data
         matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
-        ds=Dataset(data_in=matfile)
+        ds=Dataset(data_in=matfile, device=device)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
         
         num_modal = ds.num_modal

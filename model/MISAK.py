@@ -71,7 +71,7 @@ class MISA(nn.Module):
         fc = 0
         self.nes
         # [i for i, l in enumerate(MISAK.nes) if l == True]:
-        for kk in list(torch.where(self.nes)[0].numpy()):
+        for kk in list(torch.where(self.nes)[0]):
             # self.y_sub = [ for i in range(self.nes.T)], [tot = 0 for i in range(self.nes.T)]
             y_sub = torch.zeros(self.output[0].shape[0], self.d[kk].int())
             tot = 0
