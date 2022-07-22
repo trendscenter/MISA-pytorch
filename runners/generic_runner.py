@@ -8,6 +8,7 @@ from model.misa_wrapper import MISA_wrapper
 from dataset.dataset import Dataset
 from torch.utils.data import DataLoader
 import torch
+from scipy.stats import loguniform
 
 def run_misa(args, config):
     """run MISA"""
@@ -45,10 +46,25 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    nRuns = config.special.nRuns
-    epochs = config.special.epochs
-    batch_size = config.special.batch_size
-    lr = config.special.lr
+    if config.special.nRuns == []:
+        nRuns = config.special.nRuns
+    else:
+        nRuns = loguniform.rvs(0.00001, 10, size=1)
+    
+    if config.special.epochs == []:
+        epochs = config.special.epochs
+    else:
+        epochs = loguniform.rvs(0.00001, 10, size=1)
+    
+    if config.special.batch_size == []:
+        batch_size = config.special.batch_size
+    else:
+        batch_size = loguniform.rvs(0.00001, 10, size=1)
+    
+    if config.special.lr == []:
+        lr = config.special.lr
+    else:
+        lr = loguniform.rvs(0.00001, 10, size=1)
     
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
 
@@ -142,7 +158,10 @@ def run_misa(args, config):
         Results = {
             # 'input_dim': input_dim,
             # 'CorrelationCoef': results,
-            'recovered_sources': recovered_sources
+            'recovered_sources': recovered_sources,
+            'lr': lr,
+            'epochs': epochs,
+            'batch_size': batch_size
         }
     # else:
     #     if mask_name.lower() in ['simtb16']:
