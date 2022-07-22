@@ -10,6 +10,15 @@ from torch.utils.data import DataLoader
 import torch
 from scipy.stats import loguniform
 
+class loguniform_int:
+    """Integer valued version of the log-uniform distribution"""
+    def __init__(self, a, b):
+        self._distribution = loguniform(a, b)
+
+    def rvs(self, *args, **kwargs):
+        """Random variable sample"""
+        return self._distribution.rvs(*args, **kwargs).astype(int)
+
 def run_misa(args, config):
     """run MISA"""
 
@@ -46,25 +55,25 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    if config.special.nRuns == []:
+    if config.special.nRuns != []:
         nRuns = config.special.nRuns
     else:
-        nRuns = loguniform.rvs(0.00001, 10, size=1)
+        nRuns = loguniform_int(0, 10).rvs(size=1)[0]
     
-    if config.special.epochs == []:
+    if config.special.epochs != []:
         epochs = config.special.epochs
     else:
-        epochs = loguniform.rvs(0.00001, 10, size=1)
+        epochs = loguniform_int(10, 500).rvs(size=1)[0]
     
-    if config.special.batch_size == []:
+    if config.special.batch_size != []:
         batch_size = config.special.batch_size
     else:
-        batch_size = loguniform.rvs(0.00001, 10, size=1)
+        batch_size = loguniform_int(1, 10000).rvs(size=1)[0]
     
-    if config.special.lr == []:
+    if config.special.lr != []:
         lr = config.special.lr
     else:
-        lr = loguniform.rvs(0.00001, 10, size=1)
+        lr = loguniform.rvs(0.00001, 0.1, size=1)[0]
     
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
 

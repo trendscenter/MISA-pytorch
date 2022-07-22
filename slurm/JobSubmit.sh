@@ -6,10 +6,11 @@
 #SBATCH --nodes=1
 #SBATCH -c 5
 #SBATCH --mem=44g
+#SBATCH --array=0-7
 #SBATCH -t 7200
-#SBATCH -J pixl
-#SBATCH -e err%A-%a.err
-#SBATCH -o out%A-%a.out
+#SBATCH -J MISA-pytorch
+#SBATCH -e /data/users2/dkhosravinezhad1/MISA-batch/MISA-error
+#SBATCH -o /data/users2/dkhosravinezhad1/MISA-batch/MISA-output
 #SBATCH -A PSYC0002
 #SBATCH --oversubscribe
 #SBATCH --mail-type=ALL
@@ -17,10 +18,10 @@
 
 sleep 5s
 
-source /home/users/ga20055/anaconda3/bin/activate
-conda activate pixl
+source /data/users2/dkhosravinezhad1/anaconda3/bin/activate
+conda activate ipy
 
-cd /data/users1/xinhui/fusion
-python main.py 
+cd /data/users2/dkhosravinezhad1/MISA-pytorch
+python main.py --run run/$((SLURM_ARRAY_TASK_ID))/
 
 sleep 5s
