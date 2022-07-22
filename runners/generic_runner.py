@@ -46,10 +46,7 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    if config.special.nRuns == []:
-        nRuns = config.special.nRuns
-    else:
-        nRuns = loguniform.rvs(0.00001, 10, size=1)
+    nRuns = config.special.nRuns
     
     if config.special.epochs == []:
         epochs = config.special.epochs
