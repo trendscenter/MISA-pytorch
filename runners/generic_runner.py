@@ -63,12 +63,15 @@ def run_misa(args, config):
     if config.special.epochs != []:
         epochs = config.special.epochs
     else:
-        epochs = loguniform_int(10, 500).rvs(size=1)[0]
-    
+        # the integer type returned by loguniform_int is int64, 
+        # which can't recognized as an int in DataLoader,
+        # so need to cast int64 to int here
+        epochs = int(loguniform_int(100, 500).rvs(size=1)[0])
+
     if config.special.batch_size != []:
         batch_size = config.special.batch_size
     else:
-        batch_size = loguniform_int(1, 10000).rvs(size=1)[0]
+        batch_size = int(loguniform_int(10, 10000).rvs(size=1)[0])
     
     if config.special.lr != []:
         lr = config.special.lr
@@ -85,7 +88,7 @@ def run_misa(args, config):
     if data.lower() == 'mat':
         # load the data
         matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
-        ds=Dataset(data_in=matfile)
+        ds=Dataset(data_in=matfile, device=device)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
         
         num_modal = ds.num_modal
