@@ -6,7 +6,7 @@ import scipy.io as sio
 
 class MISA(nn.Module):
     # Unknown default parameters, "weights = None" for optional weight modification
-    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias = False, seed = 0):
+    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu'):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
         # Setting arguments/filters
@@ -16,6 +16,7 @@ class MISA(nn.Module):
         nu = (2*eta + torch.sum(torch.cat(subspace[index], axis=1), dim=1) - 2)/(2*beta)
         assert torch.all(torch.gt(nu, torch.zeros_like(nu))).item(), "All nu parameter derived from eta and d should be positive."
         # Defining variables
+        self.device = device
         self.index = index  # M (slice object)
         self.subspace = subspace  # S
         self.beta = beta  # beta
@@ -32,7 +33,7 @@ class MISA(nn.Module):
         self.output = list()
         self.num_observations = None
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
-        self.nes = torch.ne(self.d, torch.zeros_like(self.d))
+        self.nes = torch.ne(self.d, torch.zeros_like(self.d, device=device))
         # "NameError: name 'self' is not defined" despite passing through debugger
         self.a = (torch.pow(self.lam, (-1/self.beta))) * torch.lgamma(self.nu + 1 / self.beta) / (self.d * torch.lgamma(self.nu))
         self.d_k = [(torch.sum(self.subspace[i].int(), axis=1)).int() for i in range(len(self.subspace))]
@@ -73,7 +74,7 @@ class MISA(nn.Module):
         # [i for i, l in enumerate(MISAK.nes) if l == True]:
         for kk in list(torch.where(self.nes)[0]):
             # self.y_sub = [ for i in range(self.nes.T)], [tot = 0 for i in range(self.nes.T)]
-            y_sub = torch.zeros(self.output[0].shape[0], self.d[kk].int())
+            y_sub = torch.zeros(self.output[0].shape[0], self.d[kk].int(), device=self.device)
             tot = 0
             for mm in range(self.index.stop)[self.index]:
                 # self.ix = [tot + self.d_k[:m][:i] if self.ix is None, 'y_sub(ix,:) = O.Y{mm}(logical(O.S{mm}(kk,:)),:)' else for m in range(self.index)]
