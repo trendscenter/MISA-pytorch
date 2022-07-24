@@ -17,7 +17,8 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
                  lam=lam, 
                  input_dim=input_dim, 
                  output_dim=output_dim,
-                 seed=seed)
+                 seed=seed,
+                 device=device)
     model.to(device=device)
     if not test:
         model.train_me(data_loader, epochs, lr)
