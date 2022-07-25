@@ -9,6 +9,7 @@ class MISA(nn.Module):
     def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu'):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
+        self.seed()
         # Setting arguments/filters
         assert torch.all(torch.gt(eta, (2-torch.sum(torch.cat(subspace[index], axis=1), axis=1))/2)).item(), "All eta parameters should be lagerer than (2-d)/2."
         assert torch.all(torch.gt(beta, torch.zeros_like(beta))).item(), "All beta parameters should be positive"  # Boolean operations in torch
@@ -44,9 +45,9 @@ class MISA(nn.Module):
                 with torch.no_grad():
                     self.net[mm].weight.copy_(weights[mm]) # Difference between "weight" and "weights", has to be "weights" to work with copying from "weights" variable, most likely need to go back and change some variables from "weight" to "weights"
 
-    def seed(seed = None, seed_torch = True):
+    def seed(self, seed = None, seed_torch = True):
         if seed is None:
-            seed = torch.random.choice(2 ** 32)
+            self.seed = torch.random.choice(2 ** 32)
             random.seed(seed)
             torch.random.seed(seed)
         if seed_torch:
@@ -56,7 +57,7 @@ class MISA(nn.Module):
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
 
-    def seed_worker(worker_id):
+    def seed_worker(self, worker_id):
         worker_seed = torch.initial_seed() % 2**32
         torch.random.seed(worker_seed)
         random.seed(worker_seed)

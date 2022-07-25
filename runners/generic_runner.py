@@ -71,7 +71,7 @@ def run_misa(args, config):
     if config.special.batch_size != []:
         batch_size = config.special.batch_size
     else:
-        batch_size = int(loguniform_int(10, 10000).rvs(size=1)[0])
+        batch_size = int(loguniform_int(20, 1000).rvs(size=1)[0])
     
     if config.special.lr != []:
         lr = config.special.lr

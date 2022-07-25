@@ -24,3 +24,13 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
         model.train_me(data_loader, epochs, lr)
     else:
         model.predict(data_loader)
+    torch.save({'model': model.state_dict(),
+                'seed': model.seed,
+                'index': model.index,
+                'subspace': model.subspace,
+                'eta': model.eta,
+                'beta': model.beta,
+                'lam': model.lam},
+               ckpt_file)
+    print("Saved to: " + ckpt_file)
+    return model.output
