@@ -47,13 +47,13 @@ class MISA(nn.Module):
 
     def seed(self, seed = None, seed_torch = True):
         if seed is None:
-            self.seed = torch.random.choice(2 ** 32)
-            random.seed(seed)
-            torch.random.seed(seed)
+            self.seed = np.random.choice(2 ** 32)
+            random.seed(self.seed)
+            np.random.seed(self.seed)
         if seed_torch:
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            torch.cuda.manual_seed(seed)
+            torch.manual_seed(self.seed)
+            torch.cuda.manual_seed_all(self.seed)
+            torch.cuda.manual_seed(self.seed)
             torch.backends.cudnn.benchmark = False
             torch.backends.cudnn.deterministic = True
 
