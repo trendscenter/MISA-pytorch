@@ -14,10 +14,10 @@ objects = []
 filetype = filename[-2:]
 if filetype == ".p":
   contents = CPU_Unpickler(filename).load()
-  '''with open(filename, 'rb') as handle:
+  with open(filename, 'rb') as handle:
     b = pickle.load(handle)
-    print(b)'''
-  if torch.cuda.is_available():
+    print(b)
+  '''if torch.cuda.is_available():
     device = 'cuda'
   else:
     device = 'cpu'
@@ -28,7 +28,7 @@ if filetype == ".p":
             objects.append(pickle.load(openfile))
         except EOFError:
             break
-    print(objects)
+    print(objects)'''
 elif filetype == "pt":
   print(torch.load(filename,map_location=torch.device('cpu')))
 else:
@@ -37,3 +37,4 @@ else:
     filename = input("Insert file directory here: ")
 '''with open('run/19/checkpoints/sim-siva/misa_MAT_siva_s0.pt', 'rb') as handle:
     b = pickle.load(handle)'''
+  #/data/users2/dkhosravinezhad1/MISA-pytorch/model/MISAK.py
