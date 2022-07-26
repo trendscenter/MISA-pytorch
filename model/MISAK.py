@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
     # num_observations = None
     # d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
-    # output = model.output
+    output = model.output
     # train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
     # test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
     # x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]

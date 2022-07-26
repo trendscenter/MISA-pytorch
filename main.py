@@ -47,6 +47,12 @@ if __name__ == '__main__':
         new_config.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         
         r = run_misa(args, new_config)
+        for k, v in r.items():
+            if type(v) == list:
+                vcpu=[]
+                for i, j in enumerate(v[0]):
+                    vcpu.append(j.detach().cpu())
+                r[k] = vcpu
         
         # save results
         # runner loops over many seeds, so the saved file contains results from multiple runs
