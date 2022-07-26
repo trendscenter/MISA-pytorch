@@ -1,40 +1,44 @@
 import pickle
 import torch
-import io
+import os
+from os.path import exists
 
-class CPU_Unpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if module == 'torch.storage' and name == '_load_from_bytes':
-            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
-        else:
-          return super().find_class(module, name)
-
-filename = input("Insert file directory here: ")
+filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/run'
+array_number = len(os.listdir(filepath)[2:])
+filename = 'res_sim-siva.p'# input("Insert file directory here: ")
 objects = []
 filetype = filename[-2:]
-if filetype == ".p":
-  contents = CPU_Unpickler(filename).load()
-  with open(filename, 'rb') as handle:
-    b = pickle.load(handle)
-    print(b)
-  '''if torch.cuda.is_available():
-    device = 'cuda'
+lr = []
+epochs = []
+batch_size = []
+for i in range(array_number):
+  full_filename = os.path.join(filepath,str(i), filename)
+  file_exists = exists(full_filename)
+  if file_exists:
+    if i < 10:
+      j = full_filename[-16]
+      with open(full_filename, 'rb') as handle:
+        b = pickle.load(handle)
+      lr.append(b['lr']) 
+      epochs.append(b['epochs'])
+      batch_size.append(b['batch_size'])
+      print("array " + str(j) + " learning rate = " + str(lr[int(j)]))
+      print("array " + str(j) + " epochs = " + str(epochs[int(j)]))
+      print("array " + str(j) + " batch size = " + str(batch_size[int(j)]))
+    else:
+      j = full_filename[-17:-15] 
+      with open(full_filename, 'rb') as handle:
+        b = pickle.load(handle)
+      lr.append(b['lr']) 
+      epochs.append(b['epochs'])
+      batch_size.append(b['batch_size'])
+      print("array " + str(j) + " learning rate = " + str(lr[i-1]))
+      print("array " + str(j) + " epochs = " + str(epochs[i-1]))
+      print("array " + str(j) + " batch size = " + str(batch_size[i-1]))
+  elif filetype == "pt":
+    print(torch.load(full_filename,map_location=torch.device('cpu')))
   else:
-    device = 'cpu'
-  torch.cuda.device(device)
-  with (open(filename, "rb")) as openfile:
-    while True:
-        try:
-            objects.append(pickle.load(openfile))
-        except EOFError:
-            break
-    print(objects)'''
-elif filetype == "pt":
-  print(torch.load(filename,map_location=torch.device('cpu')))
-else:
-  while filetype != ".p" or "pt":
-    print("Error: Not a pickle file")
-    filename = input("Insert file directory here: ")
-'''with open('run/19/checkpoints/sim-siva/misa_MAT_siva_s0.pt', 'rb') as handle:
-    b = pickle.load(handle)'''
-  #/data/users2/dkhosravinezhad1/MISA-pytorch/model/MISAK.py
+    print(full_filename + " does not exist or is corrupted.")
+print("learning rate list:" + str(lr)) 
+print("epochs list: " + str(epochs)) 
+print("batch size list: " + str(batch_size))
