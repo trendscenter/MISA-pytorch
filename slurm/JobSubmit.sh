@@ -2,15 +2,15 @@
 #SBATCH -N 1 
 #SBATCH -n 1
 #SBATCH -p qTRDGPUH,qTRDGPUM
-#SBATCH --gres=gpu:v100:1
+#SBATCH --gres=gpu:1
 #SBATCH --nodes=1
 #SBATCH -c 5
 #SBATCH --mem=44g
-#SBATCH --array=0-12
+#SBATCH --array=0-7
 #SBATCH -t 7200
 #SBATCH -J MISA-pytorch
-#SBATCH -e slurm_log/error%A-%a.err
-#SBATCH -o slurm_log/output%A-%a.out
+#SBATCH -e /data/users2/dkhosravinezhad1/MISA-pytorch/slurm_log/error%A-%a.err
+#SBATCH -o /data/users2/dkhosravinezhad1/MISA-pytorch/slurm_log/output%A-%a.out
 #SBATCH -A PSYC0002
 #SBATCH --oversubscribe
 #SBATCH --mail-type=ALL

@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "load_pickle.py",
             "args": ["--data", "MAT", "--config", "sim-siva.yaml", "--run", "run-siva/"],
             "console": "integratedTerminal",
             "justMyCode": true,
