@@ -5,6 +5,7 @@ from os.path import exists
 import fnmatch
 import natsort
 from re import search
+import pandas as pd
 
 filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/run'
 loss_filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/slurm_log'
@@ -182,3 +183,7 @@ print("batch size list length: " + str(len(batch_size)))
 print("final loss list length: " + str(len(loss)))
 print("75th loss list length: " + str(len(seventy_fifth_loss)))
 print('MATLAB loss epoch list length: ' + str(len(epoch)))
+
+df = pd.DataFrame(list(zip(lr, epochs, batch_size, loss, seventy_fifth_loss, epoch)),
+               columns =['learning rate', 'epochs', 'batch size','final loss','75th loss', 'MATLAB loss epoch'])
+df.to_csv('/data/users2/dkhosravinezhad1/MISA-pytorch/slurm_csv/SLURM.csv', index = True)
