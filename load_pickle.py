@@ -4,6 +4,7 @@ import os
 from os.path import exists
 import fnmatch
 import natsort
+from re import search
 
 filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/run'
 loss_filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/slurm_log'
@@ -22,6 +23,7 @@ filetype = filename[-2:]
 lr = []
 epochs = []
 batch_size = []
+epoch = []
 h = 0
 for i in range(slurm_length):
   slurm_full = os.path.join(loss_filepath,slurm_filename[i])
@@ -39,8 +41,27 @@ for i in range(slurm_length):
             seven_five = lost.readlines()[78]
             print("array " + (slurm_full[-20:])[-5] + " 75th loss: " + seven_five[-27:-19])
             seventy_fifth_loss.append(seven_five[-27:-19])
+            lost.seek(0)
         else:
           print(slurm_full + " does not contain a 75th epoch")
+          seventy_fifth_loss.append(None)
+      with open(slurm_full, 'r') as lost:
+        epoch_iterations = lost.readlines()[4:-1]
+        epoch_list = []
+        for i in epoch_iterations:
+            epoch_list.append(i[-27:-19])
+        for i, l in enumerate(epoch_list):
+          if search('170', l):
+            epoch.append(i+1)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i+1))
+            break
+          elif search('169', l):
+            epoch.append(i+1)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i+1))
+            break
+        else:
+          epoch.append(400)
+          print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: 400")
     elif i < 99:
       with open(slurm_full, 'r') as lost:
         loss_line = lost.readlines()[-2]
@@ -53,8 +74,27 @@ for i in range(slurm_length):
             seven_five = lost.readlines()[78]
             print("array " + (slurm_full[-20:])[-6:-4] + " 75th loss: " + seven_five[-27:-19])
             seventy_fifth_loss.append(seven_five[-27:-19])
+            lost.seek(0)
         else:
           print(slurm_full + " does not contain a 75th epoch")
+          seventy_fifth_loss.append(None)
+      with open(slurm_full, 'r') as lost:
+        epoch_iterations = lost.readlines()[4:-1]
+        epoch_list = []
+        for i in epoch_iterations:
+            epoch_list.append(i[-27:-19])
+        for i, l in enumerate(epoch_list):
+          if search('170', l):
+            epoch.append(i)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            break
+          elif search('169', l):
+            epoch.append(i)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            break
+        else:
+          epoch.append(400)
+          print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: 400")
     else:
       with open(slurm_full, 'r') as lost:
         loss_line = lost.readlines()[-2]
@@ -67,8 +107,27 @@ for i in range(slurm_length):
             seven_five = lost.readlines()[78]
             print("array " + (slurm_full[-20:])[-6:-3] + " 75th loss: " + seven_five[-27:-19])
             seventy_fifth_loss.append(seven_five[-27:-19])
+            lost.seek(0)
         else:
           print(slurm_full + " does not contain a 75th epoch")
+          seventy_fifth_loss.append(None)
+      with open(slurm_full, 'r') as lost:
+        epoch_iterations = lost.readlines()[4:-1]
+        epoch_list = []
+        for i in epoch_iterations:
+            epoch_list.append(i[-27:-19])
+        for i, l in enumerate(epoch_list):
+          if search('170', l):
+            epoch.append(i)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            break
+          elif search('169', l):
+            epoch.append(i)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            break
+          else:
+            epoch.append(400)
+            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: 400")
   else:
     print(slurm_full + " has no contents. Check error file for problem!")
 
@@ -116,8 +175,10 @@ print("epochs list: " + str(epochs))
 print("batch size list: " + str(batch_size))
 print("final loss list: " + str(loss))
 print('75th loss list: ' + str(seventy_fifth_loss))
+print('MATLAB loss epoch list: ' + str(epoch))
 print("learning rate list length: " + str(len(lr))) 
 print("epochs list length: " + str(len(epochs))) 
 print("batch size list length: " + str(len(batch_size)))
 print("final loss list length: " + str(len(loss)))
 print("75th loss list length: " + str(len(seventy_fifth_loss)))
+print('MATLAB loss epoch list length: ' + str(len(epoch)))
