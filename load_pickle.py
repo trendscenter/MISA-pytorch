@@ -2,16 +2,76 @@ import pickle
 import torch
 import os
 from os.path import exists
+import fnmatch
+import natsort
 
 filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/run'
+loss_filepath = '/data/users2/dkhosravinezhad1/MISA-pytorch/slurm_log'
 array_number = len(os.listdir(filepath)[2:])
+slurm_length = int(len(os.listdir(loss_filepath))/2)
+slurm_filename = []
+for i in os.listdir(loss_filepath):
+  if fnmatch.fnmatch(i, 'output*'):
+    slurm_filename.append(i)
+slurm_filename = natsort.natsorted(slurm_filename)
+slurm_final_loss = [-1]
 filename = 'res_sim-siva.p'# input("Insert file directory here: ")
-objects = []
+loss = []
+seventy_fifth_loss = []
 filetype = filename[-2:]
 lr = []
 epochs = []
 batch_size = []
 h = 0
+for i in range(slurm_length):
+  slurm_full = os.path.join(loss_filepath,slurm_filename[i])
+  output_exists = exists(slurm_full)
+  if os.stat(slurm_full).st_size != 0:
+    if i < 10:
+      with open(slurm_full, 'r') as lost:
+        loss_line = lost.readlines()[-2]
+        print("array " + (slurm_full[-19:])[-5] + " final loss: " + loss_line[-27:-19])
+        loss.append(loss_line[-27:-19])
+        lost.seek(0)
+        seventy = len(lost.readlines())
+        if seventy >= 78:
+          with open(slurm_full, 'r') as lost:
+            seven_five = lost.readlines()[78]
+            print("array " + (slurm_full[-20:])[-5] + " 75th loss: " + seven_five[-27:-19])
+            seventy_fifth_loss.append(seven_five[-27:-19])
+        else:
+          print(slurm_full + " does not contain a 75th epoch")
+    elif i < 99:
+      with open(slurm_full, 'r') as lost:
+        loss_line = lost.readlines()[-2]
+        print("array " + (slurm_full[-20:])[-6:-4] + " final loss: " + loss_line[-27:-19])
+        loss.append(loss_line[-27:-19])
+        lost.seek(0)
+        seventy = len(lost.readlines())
+        if seventy >= 78:
+          with open(slurm_full, 'r') as lost:
+            seven_five = lost.readlines()[78]
+            print("array " + (slurm_full[-20:])[-6:-4] + " 75th loss: " + seven_five[-27:-19])
+            seventy_fifth_loss.append(seven_five[-27:-19])
+        else:
+          print(slurm_full + " does not contain a 75th epoch")
+    else:
+      with open(slurm_full, 'r') as lost:
+        loss_line = lost.readlines()[-2]
+        print("array " + (slurm_full[-21:])[-6:-3] + " final loss: " + loss_line[-27:-19])
+        loss.append(loss_line[-27:-19])
+        lost.seek(0)
+        seventy = len(lost.readlines())
+        if seventy >= 78:
+          with open(slurm_full, 'r') as lost:
+            seven_five = lost.readlines()[78]
+            print("array " + (slurm_full[-20:])[-6:-3] + " 75th loss: " + seven_five[-27:-19])
+            seventy_fifth_loss.append(seven_five[-27:-19])
+        else:
+          print(slurm_full + " does not contain a 75th epoch")
+  else:
+    print(slurm_full + " has no contents. Check error file for problem!")
+
 for i in range(array_number):
   full_filename = os.path.join(filepath,str(i), filename)
   file_exists = exists(full_filename)
@@ -54,6 +114,10 @@ for i in range(array_number):
 print("learning rate list:" + str(lr)) 
 print("epochs list: " + str(epochs)) 
 print("batch size list: " + str(batch_size))
+print("final loss list: " + str(loss))
+print('75th loss list: ' + str(seventy_fifth_loss))
 print("learning rate list length: " + str(len(lr))) 
 print("epochs list length: " + str(len(epochs))) 
 print("batch size list length: " + str(len(batch_size)))
+print("final loss list length: " + str(len(loss)))
+print("75th loss list length: " + str(len(seventy_fifth_loss)))
