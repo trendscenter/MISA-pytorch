@@ -87,15 +87,15 @@ for i in range(slurm_length):
         for i, l in enumerate(epoch_list):
           if search('170', l):
             epoch.append(i)
-            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            print("array " + (slurm_full[-20:])[-6:-4] + " MATLAB loss epoch: " + str(i+1))
             break
           elif search('169', l):
             epoch.append(i)
-            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            print("array " + (slurm_full[-20:])[-6:-4] + " MATLAB loss epoch: " + str(i+1))
             break
         else:
           epoch.append(400)
-          print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: 400")
+          print("array " + (slurm_full[-20:])[-6:-4] + " MATLAB loss epoch: 400")
     else:
       with open(slurm_full, 'r') as lost:
         loss_line = lost.readlines()[-2]
@@ -120,15 +120,15 @@ for i in range(slurm_length):
         for i, l in enumerate(epoch_list):
           if search('170', l):
             epoch.append(i)
-            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            print("array " + (slurm_full[-20:])[-6:-3] + " MATLAB loss epoch: " + str(i+1))
             break
           elif search('169', l):
             epoch.append(i)
-            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: " + str(i))
+            print("array " + (slurm_full[-20:])[-6:-3] + " MATLAB loss epoch: " + str(i+1))
             break
           else:
             epoch.append(400)
-            print("array " + (slurm_full[-20:])[-5] + " MATLAB loss epoch: 400")
+            print("array " + (slurm_full[-20:])[-6:-3] + " MATLAB loss epoch: 400")
   else:
     print(slurm_full + " has no contents. Check error file for problem!")
 
