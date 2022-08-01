@@ -64,5 +64,4 @@ if __name__ == '__main__':
     ds=Dataset(data_in=os.path.join(rootpath,"sim_siva.mat"))
     dl=data.DataLoader(dataset=ds, batch_size=1000, shuffle=True)
     for i, data_in in enumerate(dl):
-        # import pdb; pdb.set_trace()
         print(len(data_in), data_in[0].shape)

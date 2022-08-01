@@ -1,8 +1,8 @@
 # MISA-pytorch
 
-This repository contains a Pytorch implementation for Multidataset Independent Subspace Analysis (MISA).
+This repository contains a PyTorch implementation for Multidataset Independent Subspace Analysis (MISA).
 
-## Environment Set-up
+## Environment
 
 1. Clone repository
 
@@ -22,4 +22,8 @@ conda activate misa
 ```
 cd MISA-pytorch
 pip install -r requirements.txt
-```# MISAK
+```
+
+## Simulation
+
+Update the yaml file under the [configs](/configs/) folder, and use `python main.py` to run the simulation.
