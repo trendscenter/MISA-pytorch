@@ -5,7 +5,6 @@ import numpy as np
 import scipy.io as sio
 
 class MISA(nn.Module):
-    # Unknown default parameters, "weights = None" for optional weight modification
     def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu'):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
@@ -35,15 +34,13 @@ class MISA(nn.Module):
         self.num_observations = None
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
         self.nes = torch.ne(self.d, torch.zeros_like(self.d, device=device))
-        # "NameError: name 'self' is not defined" despite passing through debugger
         self.a = (torch.pow(self.lam, (-1/self.beta))) * torch.lgamma(self.nu + 1 / self.beta) / (self.d * torch.lgamma(self.nu))
         self.d_k = [(torch.sum(self.subspace[i].int(), axis=1)).int() for i in range(len(self.subspace))]
-        # Unsure if consistent to summing up "True" elements or if added "False" and was coincidential
         self.K = self.nes.sum()
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weight.copy_(weights[mm]) # Difference between "weight" and "weights", has to be "weights" to work with copying from "weights" variable, most likely need to go back and change some variables from "weight" to "weights"
+                    self.net[mm].weight.copy_(weights[mm]) 
 
     def seed(self, seed = None, seed_torch = True):
         if seed is None:
@@ -72,48 +69,34 @@ class MISA(nn.Module):
         JD = 0
         fc = 0
         self.nes
-        # [i for i, l in enumerate(MISAK.nes) if l == True]:
         for kk in list(torch.where(self.nes)[0]):
-            # self.y_sub = [ for i in range(self.nes.T)], [tot = 0 for i in range(self.nes.T)]
             y_sub = torch.zeros(self.output[0].shape[0], self.d[kk].int(), device=self.device)
             tot = 0
             for mm in range(self.index.stop)[self.index]:
-                # self.ix = [tot + self.d_k[:m][:i] if self.ix is None, 'y_sub(ix,:) = O.Y{mm}(logical(O.S{mm}(kk,:)),:)' else for m in range(self.index)]
                 ix = slice(tot, tot + self.d_k[mm][kk].int())
                 if ix.start < ix.stop:
-                    # Unknown for use of boolean in MATLAB code; Purpose of ix?
                     y_sub[:, ix] = self.output[mm][:,self.subspace[mm][kk, :] == 1]
                 tot = tot + self.d_k[mm][kk].int()
-            # torch.Tensor.detach(y_sub.T @ y_sub).numpy()
             yyT = y_sub.T @ y_sub
             g_k = torch.pow(torch.diag(yyT), -.5)
             g2_k = torch.pow(torch.diag(yyT), -1)
             g_kInv = torch.pow(torch.diag(yyT), .5)
             ybar_sub = g_kInv * y_sub
-            # Old line: yyTInv =  yyT / torch.diagonal(torch.eye(MISAK.d[kk].int()), offset = 0) # torch.tensor(np.linalg.lstsq(yyT, torch.eye(MISAK.d[kk].int())))
             yyTInv = torch.linalg.inv(yyT)
-            A = ybar_sub @ yyTInv  # ybar_sub =? torch.zeros_like(yyTInv)
+            A = ybar_sub @ yyTInv
             z_k = torch.sum(ybar_sub * A, axis=1)
             z_k_beta = torch.pow(z_k, self.beta[kk])
             JE = JE + self.lam[kk] * torch.mean(z_k_beta)
             if self.eta[kk] != 1:
-                # "91 -" relevance?
                 JF = JF + (1-self.eta[kk]) * torch.mean(torch.log(z_k))
-            # JC = JC + torch.sum(torch.log(torch.tensor([np.linalg.eig(np.isnan(g_k * yyT * g_k)))[i] for i in range(len(np.isnan(torch.Tensor.detach(g_k).numpy() * (torch.Tensor.detach(yyT).numpy() * torch.Tensor.detach(g_k).numpy()))) - 2)])))
-            # [np.linalg.eig(np.isnan(g_k * (yyT * g_k))[i] for i in range(len(np.isnan(g_k* (yyT * g_k)) - 2)))])) # RuntimeError: input should not contain infs or NaNs
             JC = JC + torch.sum(torch.log(torch.linalg.eigvalsh(g_k[:, None] * (yyT * g_k[None, :]))))
-            # insert gradient descent here
         JC = JC / 2
         fc = 0.5 * torch.log(torch.tensor(torch.pi)) * torch.sum(self.d) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
-            # insert gradient descent here
         for mm in range(self.index.stop)[self.index]:
-            # torch.tensor(MISAK.net).size()
-            cc,rr = self.net[mm].weight.size()# state_dict()['parameters']).size()
-            # rr and cc are flipped
+            cc,rr = self.net[mm].weight.size()
             if rr == cc:
-                JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1] #torch.log(torch.abs(torch.det(self.net[mm].weight)))
+                JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1]
             else:
-                # D = torch.linalg.eigh(self.net[mm].weight.T @ self.net[mm].weight)[0]
                 D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
                 JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
         J = JE + JF + JC + JD + fc
@@ -123,7 +106,6 @@ class MISA(nn.Module):
         optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
         training_loss = []
         batch_loss = []
-        # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=30, gamma=0.1, last_epoch = -1, verbose = False) # Presented parameters for future use, possibly will be presented in seperate file
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -131,12 +113,10 @@ class MISA(nn.Module):
                 loss = self.loss()
                 loss.backward()
                 optim.step()
-                # scheduler.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
             if epochs % 1 == 0:
                 print('epoch ', epochs+1, ' loss = ', loss.detach())
-                # scheduler.print_lr()
 
     def predict(self, test_data):
         batch_loss = []
@@ -144,20 +124,15 @@ class MISA(nn.Module):
             self.forward(data)
             loss = self.loss()
             batch_loss.append(loss.detach())
-        # print('epoch ', epochs+1, ' loss = ', loss.detach())
 
 if __name__ == "__main__":
     X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
     x = [torch.tensor(np.float32(X_mat[i].T)) for i in range(len(X_mat))]
     N = x[0].size(0)
-    # x = [torch.rand(N, d) if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
     num_modal = len(x)
-    index = slice(0, num_modal) # [i for i in range(num_modal)]
+    index = slice(0, num_modal)
     W0_mat = sio.loadmat("simulation_data/W0.mat")['W0'].squeeze()
     w = [torch.tensor(np.float32(W0_mat[i])) for i in range(len(W0_mat))]
-    # input_dim = [3, 3, 3]
-    # output_dim = [5, 5, 5]
-    # Alternatives to torch.eye()? Columns in torch.eye needs to match output_dim list
     K = w[0].size(1) # number of subspaces
     subspace = [torch.eye(K) for _ in range(num_modal)]
     beta = 0.5 * torch.ones(K)
@@ -169,16 +144,3 @@ if __name__ == "__main__":
     print(model.output)
     loss = model.loss()
     print(loss)
-    model.training(train_data, n_iter, learning_rate)
-    # n_iter = 1000
-    # learning_rate = 0.01
-    # model.training(x, n_iter, learning_rate)
-    
-    # nes = model.nes
-    # d = torch.sum(torch.cat(model.subspace[model.index], axis=1), axis=1)
-    # num_observations = None
-    # d_k = [torch.sum(model.subspace[i], axis=1) for i in range(len(model.subspace))]
-    output = model.output
-    # train_data = DataLoader("Insert parameters here", lr = learning_rate, shuffle = True)
-    # test = DataLoader("Insert dataset here", lr = learning_rate, shuffle = True)
-    # x = [test if i in range(index.stop)[index] else None for i, d in enumerate(input_dim)]
