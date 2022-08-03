@@ -5,8 +5,34 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-# import .model.MISAK MISA
+from model.MISAK import MISA
 
-def MISA_wrapper(latent_dim, n_layers, lr, seed,
-                 ckpt_file='misa.pt', test=False):
-    pass
+def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output_dim, seed, epochs, lr,
+                 weights=list(), device='cpu', ckpt_file='misa.pt', test=False):
+    model=MISA(weights=weights,
+                 index=index, 
+                 subspace=subspace, 
+                 eta=eta, 
+                 beta=beta, 
+                 lam=lam, 
+                 input_dim=input_dim, 
+                 output_dim=output_dim,
+                 seed=seed,
+                 device=device)
+    model.to(device=device)
+    if not test:
+        model.train_me(data_loader, epochs, lr)
+    else:
+        model.predict(data_loader)
+    
+    torch.save({'model': model.state_dict(),
+                'seed': model.seed,
+                'index': model.index,
+                'subspace': model.subspace,
+                'eta': model.eta,
+                'beta': model.beta,
+                'lam': model.lam},
+               ckpt_file)
+    print("Saved to: " + ckpt_file)
+    
+    return model.output

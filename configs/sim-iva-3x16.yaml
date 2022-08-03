@@ -1,12 +1,14 @@
 dataset: "iva-3x16"
-data_dim: 5
 # mask_name: 'ukb2907-smri-aal2'
-n_layers: [ 2,4 ] # [2,4]
-latent_dim: 6
-# data_seed: 1
-nRuns: 1
+subspace: "iva" # [2,4]
+eta: [1]
+beta: [0.5]
+lam: [1]
+input_dim: [15, 15, 15]
+output_dim: [14, 14, 14]
 
 special:
-#   max_iter: 70000
+  nRuns: 1
+  epochs: 7000
+  batch_size: 1000
   lr: 0.001
-#   cuda: False

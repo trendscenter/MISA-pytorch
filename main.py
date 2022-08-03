@@ -9,9 +9,8 @@ from runners.generic_runner import run_misa
 def parse_sim():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--data', type=str, default='MAT', help='Dataset to run experiments. Should be MAT, FUSION, or FMRI')
-    parser.add_argument('--config', type=str, default='sim-iva-3x16.yaml', help='Path to the config file')
+    parser.add_argument('--config', type=str, default='sim-siva.yaml', help='Path to the config file')
     parser.add_argument('--run', type=str, default='run/', help='Path for saving running related data.')
-
     parser.add_argument('--test', action='store_true', help='Whether to evaluate the models from checkpoints')
 
     return parser.parse_args()
@@ -48,6 +47,12 @@ if __name__ == '__main__':
         new_config.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         
         r = run_misa(args, new_config)
+        for k, v in r.items():
+            if type(v) == list:
+                vcpu=[]
+                for i, j in enumerate(v[0]):
+                    vcpu.append(j.detach().cpu())
+                r[k] = vcpu
         
         # save results
         # runner loops over many seeds, so the saved file contains results from multiple runs
