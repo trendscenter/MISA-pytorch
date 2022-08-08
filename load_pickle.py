@@ -52,11 +52,11 @@ def SLURM():
     for i in epoch_iterations:
         epoch_list.append(i[-27:-19])
     for i, l in enumerate(epoch_list):
-      if search('170', l):
+      if search('170', l[:-5]):
         epoch.append(i+1)
         print("array " + slurm_c + " MATLAB loss epoch: " + str(i+1))
         break
-      elif search('169', l):
+      elif search('169', l[:-5]):
         epoch.append(i+1)
         print("array " + slurm_c + " MATLAB loss epoch: " + str(i+1))
         break
