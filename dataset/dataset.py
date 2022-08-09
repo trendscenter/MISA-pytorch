@@ -61,7 +61,7 @@ class Dataset(data.Dataset):
 
 if __name__ == '__main__':
     rootpath="/Users/xli77/Documents/MISA-pytorch/simulation_data"
-    ds=Dataset(data_in=os.path.join(rootpath,"sim_siva.mat"))
+    ds=Dataset(data_in=os.path.join(rootpath,"sim-siva.mat"))
     dl=data.DataLoader(dataset=ds, batch_size=1000, shuffle=True)
     for i, data_in in enumerate(dl):
         print(len(data_in), data_in[0].shape)
