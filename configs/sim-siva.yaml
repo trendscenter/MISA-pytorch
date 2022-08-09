@@ -9,6 +9,6 @@ output_dim: [14, 14, 14]
 
 special:
   nRuns: 1
-  epochs: []
-  batch_size: []
-  lr: []
+  epochs: 500
+  batch_size: 128
+  lr: 0.001
