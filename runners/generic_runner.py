@@ -89,6 +89,8 @@ def run_misa(args, config):
         # load the data
         matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
         ds=Dataset(data_in=matfile, device=device)
+        if len(ds) < batch_size:
+            batch_size = len(ds)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
         
         num_modal = ds.num_modal
