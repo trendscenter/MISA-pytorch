@@ -24,7 +24,10 @@ def run_misa(args, config):
 
     # From args:
     data = args.data
+    data_filename = args.filename
+    weights = args.weights
     test = args.test
+    a_included = args.a_included
     
     # From config:
     device = config.device
@@ -87,7 +90,8 @@ def run_misa(args, config):
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
-        matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        # matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        matfile = os.path.join('./simulation_data', data_filename)
         ds=Dataset(data_in=matfile, device=device)
         if len(ds) < batch_size:
             batch_size = len(ds)
@@ -151,6 +155,7 @@ def run_misa(args, config):
                                      seed=seed,
                                      epochs=epochs,
                                      lr=lr,
+                                     weights=weights,
                                      device=device,
                                      ckpt_file=ckpt_file,
                                      test=test)
