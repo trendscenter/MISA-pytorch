@@ -153,7 +153,7 @@ def run_misa(args, config):
         
         if data.lower() == 'mat':
             # ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
-            ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data.lower(), data_filename.split('.')[0], seed))
+            ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_{}_s{}.pt'.format(data.lower(), data_filename.split('.')[0], w, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
         recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
