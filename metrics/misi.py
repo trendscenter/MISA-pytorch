@@ -11,27 +11,23 @@ def myISI(WA):
     ISI = ISI/(2*N*(N-1));
     return ISI
 
-def [out, WAr] = MISI(W,A,S):
+def MISI(W,A,S):
 
-    WA = cellfun(@(w,a) w*a, W, A, 'Un', 0)
-    WA = blkdiag(WA{:})
+    WA = [W[cc] @ A[cc] for cc in len(W)]
+    
+    M = len(S)
+    K = S[0].shape[0]
 
-    K = size(S{1},1)
-    Stmp = [S{:}]
-    idx = []
-    cps = []
-    for kk = 1:K
-        tidx = find(Stmp(kk,:))
-        idx = [idx tidx]
-        cps(kk) = length(tidx)
+    WAr = np.zeros((K,K))
 
-    WA = WA(idx,idx)
-
-    # cps = sum(Stmp,2) # This is bugged... crashes the server for large number of datasets...
-
-    # figure, imagesc(WA)
-    WAr = mat2cell(WA,cps,cps)
-    #WAr = cell2mat(cellfun(@(wa) mean(abs(wa(:))), WAr, 'Un', 0))
-    WAr = cell2mat(cellfun(@(wa) sum(abs(wa(:))), WAr, 'Un', 0))
-
+    for mm in range(M):
+        mk = np.split(S[mm] == 1, K, axis=0)
+        for kr in range(K):        # rows
+            mkr = mk[kr]
+            for kc in range(K):    # columns
+                mkc = mk[kc]
+                WAr[kr,kc] += np.sum(WA[mm][mkr,mkc])
+  
     out = myISI(WAr)
+
+    return out, WAr
