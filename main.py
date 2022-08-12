@@ -2,6 +2,7 @@ import argparse
 import os
 import pickle
 import torch
+import numpy as np
 import yaml
 from runners.generic_runner import run_misa
 
@@ -50,8 +51,11 @@ if __name__ == '__main__':
         for k, v in r.items():
             if type(v) == list:
                 vcpu=[]
-                for i, j in enumerate(v[0]):
-                    vcpu.append(j.detach().cpu())
+                if isinstance(v[0], (np.ndarray, np.generic) ):
+                    vcpu = v
+                else:
+                    for i, j in enumerate(v[0]):
+                        vcpu.append(j.detach().cpu().numpy())
                 r[k] = vcpu
         
         # save results

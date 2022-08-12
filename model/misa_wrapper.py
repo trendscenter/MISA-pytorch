@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from model.MISAK import MISA
 
 def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output_dim, seed, epochs, lr,
-                 weights=list(), device='cpu', ckpt_file='misa.pt', test=False):
+                 weights=list(), A=None, device='cpu', ckpt_file='misa.pt', test=False):
     model=MISA(weights=weights,
                  index=index, 
                  subspace=subspace, 
@@ -21,7 +21,11 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
                  device=device)
     model.to(device=device)
     if not test:
-        model.train_me(data_loader, epochs, lr)
+        training_loss, training_MISI = model.train_me(data_loader, epochs, lr, A)
+        if len(training_MISI) > 0:
+            final_MISI = training_MISI[-1]
+        else:
+            final_MISI = []
     else:
         model.predict(data_loader)
     
@@ -31,8 +35,10 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
                 'subspace': model.subspace,
                 'eta': model.eta,
                 'beta': model.beta,
-                'lam': model.lam},
+                'lam': model.lam,
+                'training_loss': training_loss,
+                'training_MISI': training_MISI}, 
                ckpt_file)
-    print("Saved to: " + ckpt_file)
+    print("Saved checkpoint to: " + ckpt_file)
     
-    return model.output
+    return model.output, final_MISI

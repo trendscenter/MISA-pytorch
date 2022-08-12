@@ -82,6 +82,7 @@ def run_misa(args, config):
 
     # recovered_sources = {l: {n: [] for n in data_seed} for l in n_layers}
     recovered_sources = []
+    final_MISIs = []
 
     # for l in n_layers:
     #     for n in data_seed:
@@ -90,6 +91,12 @@ def run_misa(args, config):
         matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
         ds=Dataset(data_in=matfile, device=device)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
+
+        # LOAD INITIAL WEIGHTS HERE?
+        initial_weights = list() # Transpose wrt to Matlab!!!!
+        # LOAD GROUND-TRUTH A MATRIX TOGETHER WITH INITIAL WEIGHTS!
+        ground_truth_A = None # Transpose wrt to Matlab!!!!
+        ground_truth_A = [np.random.randn(16,16) for i in range(3)]
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
@@ -138,7 +145,7 @@ def run_misa(args, config):
             ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
-        recov_sources = MISA_wrapper(data_loader=train_data,
+        recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
                                      index=index,
                                      subspace=subspace, 
                                      eta=eta, 
@@ -149,6 +156,8 @@ def run_misa(args, config):
                                      seed=seed,
                                      epochs=epochs,
                                      lr=lr,
+                                     weights=initial_weights,
+                                     A=ground_truth_A,            # To compute MISI in simulations. Set to None for real data.
                                      device=device,
                                      ckpt_file=ckpt_file,
                                      test=test)
@@ -157,6 +166,7 @@ def run_misa(args, config):
         # store results
         # recovered_sources[l][n].append(recov_sources)
         recovered_sources.append(recov_sources)
+        final_MISIs.append(final_MISI)
 
         # if mask_name.lower() in ['ukb2907-smri-aal2']:
         #     continue
@@ -173,8 +183,8 @@ def run_misa(args, config):
             'recovered_sources': recovered_sources,
             'lr': lr,
             'epochs': epochs,
-            'batch_size': batch_size
-        }
+            'batch_size': batch_size,
+            'final_MISIs': final_MISIs}
     # else:
     #     if mask_name.lower() in ['simtb16']:
     #         Results = {
