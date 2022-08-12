@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 # from sklearn.decomposition import FastICA
+import scipy.io as sio
 
 # from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
@@ -25,9 +26,9 @@ def run_misa(args, config):
     # From args:
     data = args.data
     data_filename = args.filename
-    weights = args.weights
+    w = args.weights
     test = args.test
-    a_included = args.a_included
+    A_exist = args.a_exist
     
     # From config:
     device = config.device
@@ -98,11 +99,14 @@ def run_misa(args, config):
             batch_size = len(ds)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
 
-        # LOAD INITIAL WEIGHTS HERE?
-        initial_weights = list() # Transpose wrt to Matlab!!!!
-        # LOAD GROUND-TRUTH A MATRIX TOGETHER WITH INITIAL WEIGHTS!
-        ground_truth_A = None # Transpose wrt to Matlab!!!!
-        ground_truth_A = [np.random.randn(16,16) for i in range(3)]
+        # LOAD INITIAL WEIGHTS
+        initial_weights = [i.T for _, i in enumerate(np.squeeze(sio.loadmat(matfile)[w]))]
+        
+        # LOAD GROUND-TRUTH A MATRIX
+        if A_exist:
+            ground_truth_A = [i.T for _, i in enumerate(np.squeeze(sio.loadmat(matfile)['A']))]
+        else:
+            ground_truth_A = None
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
@@ -162,6 +166,8 @@ def run_misa(args, config):
                                      seed=seed,
                                      epochs=epochs,
                                      lr=lr,
+                                     weights=initial_weights,
+                                     A=ground_truth_A,
                                      device=device,
                                      ckpt_file=ckpt_file,
                                      test=test)

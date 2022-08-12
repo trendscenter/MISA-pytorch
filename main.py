@@ -21,7 +21,7 @@ def parse_sim():
     required.add_argument('-r', '--run', type=str, default='run/', help='Path for saving running related data.')
     required.add_argument('-t', '--test', action='store_true', help='Whether to evaluate the models from checkpoints')
     
-    optional.add_argument('-a', '--a_included', action='store_true', help='Whether the dataset includes ground truth A matrix')
+    optional.add_argument('-a', '--a_exist', action='store_true', help='Whether the dataset includes ground truth A matrix')
     parser._action_groups.append(optional)
 
     if len(sys.argv)==1:

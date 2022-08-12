@@ -25,8 +25,8 @@ class MISA(nn.Module):
         self.lam = lam  # lambda
         self.nu = nu
         if weights != []:
-            self.input_dim = [weights[i].size(0) for i in range(len(weights))]
-            self.output_dim = [weights[i].size(1) for i in range(len(weights))]
+            self.input_dim = [weights[i].shape[0] for i in range(len(weights))]
+            self.output_dim = [weights[i].shape[1] for i in range(len(weights))]
         else:
             self.input_dim = input_dim
             self.output_dim = output_dim
@@ -41,7 +41,7 @@ class MISA(nn.Module):
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weight.copy_(weights[mm]) 
+                    self.net[mm].weight.copy_(torch.from_numpy(weights[mm])) 
 
     def seed(self, seed = None, seed_torch = True):
         if seed is None:
