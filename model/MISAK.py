@@ -3,6 +3,7 @@ import torch.nn as nn
 import random
 import numpy as np
 import scipy.io as sio
+from metrics.misi import MISI
 
 class MISA(nn.Module):
     def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu'):
@@ -24,8 +25,8 @@ class MISA(nn.Module):
         self.lam = lam  # lambda
         self.nu = nu
         if weights != []:
-            self.input_dim = [weights[i].size(0) for i in range(len(weights))]
-            self.output_dim = [weights[i].size(1) for i in range(len(weights))]
+            self.input_dim = [weights[i].shape[0] for i in range(len(weights))]
+            self.output_dim = [weights[i].shape[1] for i in range(len(weights))]
         else:
             self.input_dim = input_dim
             self.output_dim = output_dim
@@ -40,7 +41,7 @@ class MISA(nn.Module):
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weight.copy_(weights[mm]) 
+                    self.net[mm].weight.copy_(torch.from_numpy(weights[mm])) 
 
     def seed(self, seed = None, seed_torch = True):
         if seed is None:
@@ -102,10 +103,11 @@ class MISA(nn.Module):
         J = JE + JF + JC + JD + fc
         return J
 
-    def train_me(self, train_data, n_iter, learning_rate):
+    def train_me(self, train_data, n_iter, learning_rate, A=None):
         optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
         training_loss = []
         batch_loss = []
+        training_MISI = []
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -116,7 +118,12 @@ class MISA(nn.Module):
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
             if epochs % 1 == 0:
-                print('epoch ', epochs+1, ' loss = ', loss.detach())
+                if A is not None:
+                    training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
+                    print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
+                else:
+                    print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
+        return training_loss, training_MISI
 
     def predict(self, test_data):
         batch_loss = []

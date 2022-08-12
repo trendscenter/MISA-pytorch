@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 # from sklearn.decomposition import FastICA
+import scipy.io as sio
 
 # from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
@@ -24,7 +25,10 @@ def run_misa(args, config):
 
     # From args:
     data = args.data
+    data_filename = args.filename
+    w = args.weights
     test = args.test
+    A_exist = args.a_exist
     
     # From config:
     device = config.device
@@ -82,16 +86,27 @@ def run_misa(args, config):
 
     # recovered_sources = {l: {n: [] for n in data_seed} for l in n_layers}
     recovered_sources = []
+    final_MISIs = []
 
     # for l in n_layers:
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
-        matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        # matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        matfile = os.path.join('./simulation_data', data_filename)
         ds=Dataset(data_in=matfile, device=device)
         if len(ds) < batch_size:
             batch_size = len(ds)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
+
+        # LOAD INITIAL WEIGHTS
+        initial_weights = [i.T for _, i in enumerate(np.squeeze(sio.loadmat(matfile)[w]))]
+        
+        # LOAD GROUND-TRUTH A MATRIX
+        if A_exist:
+            ground_truth_A = [i.T for _, i in enumerate(np.squeeze(sio.loadmat(matfile)['A']))]
+        else:
+            ground_truth_A = None
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
@@ -140,7 +155,7 @@ def run_misa(args, config):
             ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
-        recov_sources = MISA_wrapper(data_loader=train_data,
+        recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
                                      index=index,
                                      subspace=subspace, 
                                      eta=eta, 
@@ -151,6 +166,8 @@ def run_misa(args, config):
                                      seed=seed,
                                      epochs=epochs,
                                      lr=lr,
+                                     weights=initial_weights,
+                                     A=ground_truth_A,
                                      device=device,
                                      ckpt_file=ckpt_file,
                                      test=test)
@@ -159,6 +176,7 @@ def run_misa(args, config):
         # store results
         # recovered_sources[l][n].append(recov_sources)
         recovered_sources.append(recov_sources)
+        final_MISIs.append(final_MISI)
 
         # if mask_name.lower() in ['ukb2907-smri-aal2']:
         #     continue
@@ -175,8 +193,8 @@ def run_misa(args, config):
             'recovered_sources': recovered_sources,
             'lr': lr,
             'epochs': epochs,
-            'batch_size': batch_size
-        }
+            'batch_size': batch_size,
+            'final_MISIs': final_MISIs}
     # else:
     #     if mask_name.lower() in ['simtb16']:
     #         Results = {
