@@ -74,7 +74,11 @@ if __name__ == '__main__':
         
         # save results
         # runner loops over many seeds, so the saved file contains results from multiple runs
-        fname = os.path.join(args.run, 'res_' + args.filename.split('.')[0] + '_' + args.weights + '.p')
+        if args.test:
+            fname = os.path.join(args.run, 'res_' + args.filename.split('.')[0] + '_' + args.weights + '_test.p')
+        else:
+            fname = os.path.join(args.run, 'res_' + args.filename.split('.')[0] + '_' + args.weights + '.p')
+
         pickle.dump(r, open(fname, "wb"))
 
     else:

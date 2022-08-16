@@ -123,14 +123,15 @@ class MISA(nn.Module):
                     print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
                 else:
                     print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
-        return training_loss, training_MISI
+        return training_loss, training_MISI, optim
 
     def predict(self, test_data):
-        batch_loss = []
+        test_loss = []
         for i, data in enumerate(test_data, 0):
             self.forward(data)
             loss = self.loss()
-            batch_loss.append(loss.detach())
+            test_loss.append(loss.detach())
+        return test_loss
 
 if __name__ == "__main__":
     X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()
