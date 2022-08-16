@@ -137,3 +137,5 @@ dmypy.json
 # MATLAB files
 *.mat
 *.m
+
+.DS_Store
