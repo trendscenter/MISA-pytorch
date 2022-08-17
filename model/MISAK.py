@@ -107,7 +107,10 @@ class MISA(nn.Module):
         optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
         training_loss = []
         batch_loss = []
-        training_MISI = []
+        training_MISI = []        
+        trigger_times = 0
+        patience = 10
+        
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -117,6 +120,24 @@ class MISA(nn.Module):
                 optim.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
+            
+            # early stop
+            if epochs == 0: 
+                nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
+                nn_weight_previous = nn_weight_current
+            else:
+                nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
+                nn_weight_diff = np.max(np.abs(nn_weight_current-nn_weight_previous))
+                if nn_weight_diff < 1e-5:
+                    trigger_times += 1
+                    print(f'Trigger Times: {trigger_times}')
+                    if trigger_times > patience:
+                        print(f'Early stopping! \nThe maximum of W matrix difference between the previous and current iteration is less than 10^(-5) for {trigger_times} iterations.')
+                        return training_loss, training_MISI, optim
+                else:
+                    trigger_times = 0
+                nn_weight_previous = nn_weight_current
+
             if epochs % 1 == 0:
                 if A is not None:
                     training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
