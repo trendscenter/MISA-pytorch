@@ -109,7 +109,9 @@ class MISA(nn.Module):
         batch_loss = []
         training_MISI = []        
         trigger_times = 0
-        patience = 10
+        nn_weight_threshold = 1e-4
+        loss_threshold = 0.1
+        patience = 2
         
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
@@ -121,29 +123,34 @@ class MISA(nn.Module):
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
             
+            if A is not None:
+                training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
+                print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
+            else:
+                print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
+            
             # early stop
             if epochs == 0: 
                 nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
                 nn_weight_previous = nn_weight_current
+                loss_current = loss.detach().cpu().numpy()
+                loss_previous = loss_current
             else:
                 nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
                 nn_weight_diff = np.max(np.abs(nn_weight_current-nn_weight_previous))
-                if nn_weight_diff < 1e-5:
+                loss_current = loss.detach().cpu().numpy()
+                loss_diff = np.abs(loss_current-loss_previous)
+                if nn_weight_diff < nn_weight_threshold or loss_diff < loss_threshold:
                     trigger_times += 1
                     print(f'Trigger Times: {trigger_times}')
                     if trigger_times > patience:
-                        print(f'Early stopping! \nThe maximum of W matrix difference between the previous and current iteration is less than 10^(-5) for {trigger_times} iterations.')
+                        print(f'Early stopping! \nThe maximum absolute difference of W matrix is less than {nn_weight_threshold} or that of loss is less than {loss_threshold} between the previous and current iteration for {trigger_times} iterations.')
                         return training_loss, training_MISI, optim
                 else:
                     trigger_times = 0
                 nn_weight_previous = nn_weight_current
+                loss_previous = loss_current
 
-            if epochs % 1 == 0:
-                if A is not None:
-                    training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
-                    print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
-                else:
-                    print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
         return training_loss, training_MISI, optim
 
     def predict(self, test_data):
