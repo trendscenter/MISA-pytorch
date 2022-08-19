@@ -1,3 +1,4 @@
+import copy
 import torch
 import torch.nn as nn
 import random
@@ -25,12 +26,12 @@ class MISA(nn.Module):
         self.lam = lam  # lambda
         self.nu = nu
         if weights != []:
-            self.input_dim = [weights[i].shape[0] for i in range(len(weights))]
-            self.output_dim = [weights[i].shape[1] for i in range(len(weights))]
+            self.input_dim = [weights[i].shape[1] for i in range(len(weights))]
+            self.output_dim = [weights[i].shape[0] for i in range(len(weights))]
         else:
             self.input_dim = input_dim
             self.output_dim = output_dim
-        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i], bias = bias) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0), why the ".stop" add on? What are the dimensions of this layer exactly?
+        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i], bias = bias) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0)
         self.output = list()
         self.num_observations = None
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
@@ -98,7 +99,7 @@ class MISA(nn.Module):
             if rr == cc:
                 JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1]
             else:
-                D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
+                D = torch.linalg.eigvalsh(self.net[mm].weight @ self.net[mm].weight.T)
                 JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
         J = JE + JF + JC + JD + fc
         return J
@@ -131,13 +132,13 @@ class MISA(nn.Module):
             
             # early stop
             if epochs == 0: 
-                nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
-                nn_weight_previous = nn_weight_current
+                nn_weight_current = [nn.weight.detach().cpu().numpy() for nn in self.net]
+                nn_weight_previous = copy.deepcopy(nn_weight_current)
                 loss_current = loss.detach().cpu().numpy()
                 loss_previous = loss_current
             else:
-                nn_weight_current = np.array([nn.weight.detach().cpu().numpy() for nn in self.net])
-                nn_weight_diff = np.max(np.abs(nn_weight_current-nn_weight_previous))
+                nn_weight_current = [nn.weight.detach().cpu().numpy() for nn in self.net]
+                nn_weight_diff = np.max(np.array([np.max(np.abs(nn_weight_previous[i]-c)) for i, c in enumerate(nn_weight_current)]))
                 loss_current = loss.detach().cpu().numpy()
                 loss_diff = np.abs(loss_current-loss_previous)
                 if nn_weight_diff < nn_weight_threshold or loss_diff < loss_threshold:
@@ -148,7 +149,7 @@ class MISA(nn.Module):
                         return training_loss, training_MISI, optim
                 else:
                     trigger_times = 0
-                nn_weight_previous = nn_weight_current
+                nn_weight_previous = copy.deepcopy(nn_weight_current)
                 loss_previous = loss_current
 
         return training_loss, training_MISI, optim

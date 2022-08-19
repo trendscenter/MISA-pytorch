@@ -1,10 +1,8 @@
 import os
-
 import numpy as np
-# from sklearn.decomposition import FastICA
+import mat73
 import scipy.io as sio
 
-# from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
 from dataset.dataset import Dataset
 from torch.utils.data import DataLoader
@@ -124,24 +122,39 @@ def run_misa(args, config):
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
         test_data=DataLoader(dataset=ds, batch_size=len(ds), shuffle=False)
         
+        try:
+            matdict=sio.loadmat(matfile)
+            matW=np.squeeze(matdict[w])
+            if A_exist:
+                matA=np.squeeze(matdict['A'])
+                matY=np.squeeze(matdict['Y'])
+        except:
+            matdict=mat73.loadmat(matfile)
+            matW=matdict[w]
+            if A_exist:
+                matA=matdict['A']
+                matY=matdict['Y']
+        
         # LOAD INITIAL WEIGHTS
-        initial_weights = [i for _, i in enumerate(np.squeeze(sio.loadmat(matfile)[w]))]
+        initial_weights = [i for _, i in enumerate(matW)]
         
         # LOAD GROUND-TRUTH A MATRIX
         ground_truth_A = None
         if A_exist:
-            ground_truth_A = [i for _, i in enumerate(np.squeeze(sio.loadmat(matfile)['A']))]
-            ground_truth_Y = [i.T for _, i in enumerate(np.squeeze(sio.loadmat(matfile)['Y']))]
+            ground_truth_A = [i for _, i in enumerate(matA)]
+            ground_truth_Y = [i.T for _, i in enumerate(matY)]
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
         
         input_dim = [torch.tensor(dd.shape[-1],device=device) for dd in ds.mat_data]
-        # TO DO: should NOT assume output_dim = input_dim
-        output_dim = input_dim
-        
+        if config.output_dim != []:
+            output_dim = [torch.tensor(dd,device=device) for dd in output_dim]
+        else:
+            output_dim = input_dim
+
         if subspace.lower() == 'iva':
-            subspace = [torch.eye(dd, device=device) for dd in input_dim]
+            subspace = [torch.eye(dd, device=device) for dd in output_dim]
         
         if len(eta) > 0:
             eta = torch.tensor(eta, dtype=torch.float32, device=device)
