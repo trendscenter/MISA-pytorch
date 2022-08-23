@@ -3,6 +3,7 @@ import numpy as np
 import nibabel as nib
 import torch
 import torch.utils.data as data
+import mat73
 import scipy.io as sio
 
 class Dataset(data.Dataset):
@@ -27,7 +28,11 @@ class Dataset(data.Dataset):
                 self.data_dir=data_dir
                 self.data_files=[data_file]
                 if '.mat' in data_file:
-                    self.mat_data=[i.T for _, i in enumerate(np.squeeze(sio.loadmat(self.data_in)['X']))] # (3,); mat_data[0]: (16,20k)
+                    try:
+                        mat_file = sio.loadmat(self.data_in)
+                    except:
+                        mat_file = mat73.loadmat(self.data_in) # MATLAB -v7.3 usually for data > 2GB
+                    self.mat_data=[i.T for _, i in enumerate(np.squeeze(mat_file['X']))]
                     self.num_modal=len(self.mat_data)
             else:
                 print("Invalid data_in")
@@ -61,7 +66,7 @@ class Dataset(data.Dataset):
 
 if __name__ == '__main__':
     rootpath="/Users/xli77/Documents/MISA-pytorch/simulation_data"
-    ds=Dataset(data_in=os.path.join(rootpath,"sim_siva.mat"))
+    ds=Dataset(data_in=os.path.join(rootpath,"sim-siva.mat"))
     dl=data.DataLoader(dataset=ds, batch_size=1000, shuffle=True)
     for i, data_in in enumerate(dl):
         print(len(data_in), data_in[0].shape)

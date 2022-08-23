@@ -1,3 +1,4 @@
+import copy
 import torch
 import torch.nn as nn
 import random
@@ -25,12 +26,12 @@ class MISA(nn.Module):
         self.lam = lam  # lambda
         self.nu = nu
         if weights != []:
-            self.input_dim = [weights[i].size(0) for i in range(len(weights))]
-            self.output_dim = [weights[i].size(1) for i in range(len(weights))]
+            self.input_dim = [weights[i].shape[1] for i in range(len(weights))]
+            self.output_dim = [weights[i].shape[0] for i in range(len(weights))]
         else:
             self.input_dim = input_dim
             self.output_dim = output_dim
-        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i], bias = bias) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0), why the ".stop" add on? What are the dimensions of this layer exactly?
+        self.net = nn.ModuleList([nn.Linear(self.input_dim[i], self.output_dim[i], bias = bias) if i in range(self.index.stop)[self.index] else None for i in range(self.index.stop)])  # Optional argument/parameter (w0)
         self.output = list()
         self.num_observations = None
         self.d = torch.sum(torch.cat(self.subspace[self.index], axis=1), axis=1)
@@ -41,7 +42,7 @@ class MISA(nn.Module):
         if weights != []:
             for mm in range(self.index.stop)[self.index]:
                 with torch.no_grad():
-                    self.net[mm].weight.copy_(weights[mm]) 
+                    self.net[mm].weight.copy_(torch.from_numpy(weights[mm])) 
 
     def seed(self, seed = None, seed_torch = True):
         if seed is None:
@@ -92,13 +93,13 @@ class MISA(nn.Module):
                 JF = JF + (1-self.eta[kk]) * torch.mean(torch.log(z_k))
             JC = JC + torch.sum(torch.log(torch.linalg.eigvalsh(g_k[:, None] * (yyT * g_k[None, :]))))
         JC = JC / 2
-        fc = 0.5 * torch.log(torch.tensor(torch.pi)) * torch.sum(self.d) + torch.sum(torch.lgamma(self.d)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
+        fc = 0.5 * torch.log(torch.tensor(torch.pi)) * torch.sum(self.d) + torch.sum(torch.lgamma(self.nu)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
         for mm in range(self.index.stop)[self.index]:
             cc,rr = self.net[mm].weight.size()
             if rr == cc:
                 JD = JD - torch.linalg.slogdet(self.net[mm].weight)[1]
             else:
-                D = torch.linalg.eigvalsh(self.net[mm].weight.T @ self.net[mm].weight)
+                D = torch.linalg.eigvalsh(self.net[mm].weight @ self.net[mm].weight.T)
                 JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
         J = JE + JF + JC + JD + fc
         return J
@@ -107,7 +108,12 @@ class MISA(nn.Module):
         optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
         training_loss = []
         batch_loss = []
-        training_MISI = []
+        training_MISI = []        
+        trigger_times = 0
+        nn_weight_threshold = 1e-4
+        loss_threshold = 0.1
+        patience = 2
+        
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
                 optim.zero_grad()
@@ -117,20 +123,44 @@ class MISA(nn.Module):
                 optim.step()
                 batch_loss.append(loss.detach())
             training_loss.append(batch_loss)
-            if epochs % 1 == 0:
-                if A is not None:
-                    training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
-                    print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
+            
+            if A is not None:
+                training_MISI.append(MISI([nn.weight.detach().cpu().numpy() for nn in self.net],A,[ss.detach().cpu().numpy() for ss in self.subspace])[0])
+                print('epoch: {} \tloss: {} \tMISI: {}'.format(epochs+1, loss.detach().cpu().numpy(), training_MISI[-1]))
+            else:
+                print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
+            
+            # early stop
+            if epochs == 0: 
+                nn_weight_current = [nn.weight.detach().cpu().numpy() for nn in self.net]
+                nn_weight_previous = copy.deepcopy(nn_weight_current)
+                loss_current = loss.detach().cpu().numpy()
+                loss_previous = loss_current
+            else:
+                nn_weight_current = [nn.weight.detach().cpu().numpy() for nn in self.net]
+                nn_weight_diff = np.max(np.array([np.max(np.abs(nn_weight_previous[i]-c)) for i, c in enumerate(nn_weight_current)]))
+                loss_current = loss.detach().cpu().numpy()
+                loss_diff = np.abs(loss_current-loss_previous)
+                if nn_weight_diff < nn_weight_threshold or loss_diff < loss_threshold:
+                    trigger_times += 1
+                    print(f'Trigger Times: {trigger_times}')
+                    if trigger_times > patience:
+                        print(f'Early stopping! \nThe maximum absolute difference of W matrix is less than {nn_weight_threshold} or that of loss is less than {loss_threshold} between the previous and current iteration for {trigger_times} iterations.')
+                        return training_loss, training_MISI, optim
                 else:
-                    print('epoch: {} \tloss: {}'.format(epochs+1, loss.detach().cpu().numpy()))
-        return training_loss, training_MISI
+                    trigger_times = 0
+                nn_weight_previous = copy.deepcopy(nn_weight_current)
+                loss_previous = loss_current
+
+        return training_loss, training_MISI, optim
 
     def predict(self, test_data):
-        batch_loss = []
+        test_loss = []
         for i, data in enumerate(test_data, 0):
             self.forward(data)
             loss = self.loss()
-            batch_loss.append(loss.detach())
+            test_loss.append(loss.detach())
+        return test_loss
 
 if __name__ == "__main__":
     X_mat = sio.loadmat("simulation_data/X.mat")['X'].squeeze()

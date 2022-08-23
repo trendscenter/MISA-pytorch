@@ -3,12 +3,12 @@ dataset: "siva"
 subspace: "iva" # [2,4]
 eta: [1]
 beta: [0.5]
-lam: [1]
-input_dim: [15, 15, 15]
-output_dim: [14, 14, 14]
+lam: [1.102657790843584]
+input_dim: [30, 30, 30]
+output_dim: [30, 30, 30]
 
 special:
   nRuns: 1
-  epochs: []
-  batch_size: []
-  lr: []
+  epochs: 500
+  batch_size: 2907
+  lr: 0.0005

@@ -13,7 +13,7 @@ def myISI(WAr):
 
 def MISI(W,A,S):
 
-    WA = [W[cc].T @ A[cc].T for cc in range(len(W))]
+    WA = [W[cc] @ A[cc] for cc in range(len(W))]
     
     M = len(S)
     K = S[0].shape[0]

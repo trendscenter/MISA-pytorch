@@ -1,9 +1,8 @@
 import os
-
 import numpy as np
-# from sklearn.decomposition import FastICA
+import mat73
+import scipy.io as sio
 
-# from metrics.mcc import mean_corr_coef
 from model.misa_wrapper import MISA_wrapper
 from dataset.dataset import Dataset
 from torch.utils.data import DataLoader
@@ -19,12 +18,39 @@ class loguniform_int:
         """Random variable sample"""
         return self._distribution.rvs(*args, **kwargs).astype(int)
 
+def zscore(data, axis):
+    data -= data.mean(axis=axis, keepdims=True)
+    data /= data.std(axis=axis, keepdims=True)
+    return np.nan_to_num(data, copy=False)
+
+def correlation(matrix1, matrix2):
+
+    # 1/stdev(M1,axis=1)[None,:] * (M1 @ M2.T) * 1/stdev(M2,axis=1)[:,None] / (d1-1)
+
+    d1 = matrix1.shape[-1]
+    d2 = matrix2.shape[-1]
+
+    assert d1 == d2
+    assert matrix1.ndim <= 2
+    assert matrix2.ndim <= 2
+    
+    matrix1 = zscore(matrix1.astype(float), matrix1.ndim - 1) / np.sqrt(d1)
+    matrix2 = zscore(matrix2.astype(float), matrix2.ndim - 1) / np.sqrt(d2)
+
+    if matrix1.ndim >= matrix2.ndim:
+        return matrix1 @ matrix2.T
+    else:
+        return matrix2 @ matrix1.T
+
 def run_misa(args, config):
     """run MISA"""
 
     # From args:
     data = args.data
+    data_filename = args.filename
+    w = args.weights
     test = args.test
+    A_exist = args.a_exist
     
     # From config:
     device = config.device
@@ -88,25 +114,47 @@ def run_misa(args, config):
     #     for n in data_seed:
     if data.lower() == 'mat':
         # load the data
-        matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        # matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
+        matfile = os.path.join('./simulation_data', data_filename)
         ds=Dataset(data_in=matfile, device=device)
+        if len(ds) < batch_size:
+            batch_size = len(ds)
         train_data=DataLoader(dataset=ds, batch_size=batch_size, shuffle=True)
-
-        # LOAD INITIAL WEIGHTS HERE?
-        initial_weights = list() # Transpose wrt to Matlab!!!!
-        # LOAD GROUND-TRUTH A MATRIX TOGETHER WITH INITIAL WEIGHTS!
-        ground_truth_A = None # Transpose wrt to Matlab!!!!
-        ground_truth_A = [np.random.randn(16,16) for i in range(3)]
+        test_data=DataLoader(dataset=ds, batch_size=len(ds), shuffle=False)
+        
+        try:
+            matdict=sio.loadmat(matfile)
+            matW=np.squeeze(matdict[w])
+            if A_exist:
+                matA=np.squeeze(matdict['A'])
+                matY=np.squeeze(matdict['Y'])
+        except:
+            matdict=mat73.loadmat(matfile)
+            matW=matdict[w]
+            if A_exist:
+                matA=matdict['A']
+                matY=matdict['Y']
+        
+        # LOAD INITIAL WEIGHTS
+        initial_weights = [i for _, i in enumerate(matW)]
+        
+        # LOAD GROUND-TRUTH A MATRIX
+        ground_truth_A = None
+        if A_exist:
+            ground_truth_A = [i for _, i in enumerate(matA)]
+            ground_truth_Y = [i.T for _, i in enumerate(matY)]
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
         
         input_dim = [torch.tensor(dd.shape[-1],device=device) for dd in ds.mat_data]
-        # TO DO: should NOT assume output_dim = input_dim
-        output_dim = input_dim
-        
+        if config.output_dim != []:
+            output_dim = [torch.tensor(dd,device=device) for dd in output_dim]
+        else:
+            output_dim = input_dim
+
         if subspace.lower() == 'iva':
-            subspace = [torch.eye(dd, device=device) for dd in input_dim]
+            subspace = [torch.eye(dd, device=device) for dd in output_dim]
         
         if len(eta) > 0:
             eta = torch.tensor(eta, dtype=torch.float32, device=device)
@@ -142,7 +190,8 @@ def run_misa(args, config):
         # print('Running exp with L={} and n={}; seed={}'.format(l, n, seed))
         
         if data.lower() == 'mat':
-            ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
+            # ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, config.dataset, seed))
+            ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_{}_s{}.pt'.format(data.lower(), data_filename.split('.')[0], w, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
         recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
@@ -157,11 +206,11 @@ def run_misa(args, config):
                                      epochs=epochs,
                                      lr=lr,
                                      weights=initial_weights,
-                                     A=ground_truth_A,            # To compute MISI in simulations. Set to None for real data.
+                                     A=ground_truth_A,
                                      device=device,
                                      ckpt_file=ckpt_file,
-                                     test=test)
-        
+                                     test=test,
+                                     test_data_loader=test_data)
         
         # store results
         # recovered_sources[l][n].append(recov_sources)
