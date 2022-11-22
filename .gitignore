@@ -138,4 +138,12 @@ dmypy.json
 *.mat
 *.m
 
+# figure files
+*.pdf
+*.png
+*.p
+*.pt
+*.npy
+*.zip
+
 .DS_Store
