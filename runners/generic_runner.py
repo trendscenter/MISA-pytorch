@@ -1,12 +1,11 @@
 import os
-import numpy as np
 import mat73
+import torch
+import numpy as np
 import scipy.io as sio
-
 from model.misa_wrapper import MISA_wrapper
 from dataset.dataset import Dataset
 from torch.utils.data import DataLoader
-import torch
 from scipy.stats import loguniform
 
 class loguniform_int:
@@ -81,26 +80,26 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    if config.special.nRuns != []:
-        nRuns = config.special.nRuns
+    if config.misa.nRuns != []:
+        nRuns = config.misa.nRuns
     else:
         nRuns = loguniform_int(0, 10).rvs(size=1)[0]
     
-    if config.special.epochs != []:
-        epochs = config.special.epochs
+    if config.misa.epochs != []:
+        epochs = config.misa.epochs
     else:
         # the integer type returned by loguniform_int is int64, 
         # which can't recognized as an int in DataLoader,
         # so need to cast int64 to int here
         epochs = int(loguniform_int(100, 500).rvs(size=1)[0])
-
-    if config.special.batch_size != []:
-        batch_size = config.special.batch_size
+    
+    if config.misa.batch_size != []:
+        batch_size = config.misa.batch_size
     else:
         batch_size = int(loguniform_int(20, 1000).rvs(size=1)[0])
     
-    if config.special.lr != []:
-        lr = config.special.lr
+    if config.misa.lr != []:
+        lr = config.misa.lr
     else:
         lr = loguniform.rvs(0.00001, 0.1, size=1)[0]
     
@@ -194,7 +193,7 @@ def run_misa(args, config):
             ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_{}_s{}.pt'.format(data.lower(), data_filename.split('.')[0], w, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
-        recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
+        MISA_model, final_MISI = MISA_wrapper(data_loader=train_data,
                                      index=index,
                                      subspace=subspace, 
                                      eta=eta, 
@@ -213,15 +212,8 @@ def run_misa(args, config):
                                      test_data_loader=test_data)
         
         # store results
-        # recovered_sources[l][n].append(recov_sources)
-        recovered_sources.append(recov_sources)
+        recovered_sources.append(MISA_model.output)
         final_MISIs.append(final_MISI)
-
-        # if mask_name.lower() in ['ukb2907-smri-aal2']:
-        #     continue
-
-        # results[l][n].append(np.min([metric(z, s) for z in recov_sources]))
-        # print(np.min([metric(z, s) for z in recov_sources]))
 
     # prepare output
     if data.lower() == 'mat':
@@ -233,19 +225,6 @@ def run_misa(args, config):
             'lr': lr,
             'epochs': epochs,
             'batch_size': batch_size,
-            'final_MISIs': final_MISIs}
-    # else:
-    #     if mask_name.lower() in ['simtb16']:
-    #         Results = {
-    #             'mask_name': mask_name,
-    #             'CorrelationCoef': results,
-    #             'recovered_sources': recovered_sources
-    #         }
-    #     elif mask_name.lower() in ['ukb2907-smri-aal2']:
-    #         Results = {
-    #             'mask_name': mask_name,
-    #             'recovered_sources': recovered_sources
-    #         }
-        
+            'final_MISIs': final_MISIs}        
 
     return Results

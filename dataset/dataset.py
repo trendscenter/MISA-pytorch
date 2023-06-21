@@ -34,6 +34,9 @@ class Dataset(data.Dataset):
                         mat_file = mat73.loadmat(self.data_in) # MATLAB -v7.3 usually for data > 2GB
                     self.mat_data=[i.T for _, i in enumerate(np.squeeze(mat_file['X']))]
                     self.num_modal=len(self.mat_data)
+            elif isinstance(data_in, np.ndarray): # iVAE 
+                self.num_modal=self.data_in.shape[-1]
+                self.mat_data=[data_in[:,:,m] for m in range(self.num_modal)]
             else:
                 print("Invalid data_in")
                 sys.exit(1)
