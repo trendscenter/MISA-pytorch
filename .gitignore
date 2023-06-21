@@ -139,11 +139,16 @@ dmypy.json
 *.m
 
 .DS_Store
-*.p
-*.pt
-*.pdf
 
 # slurm output
 *.err
 *.out
 *.sh
+
+# figure files
+*.pdf
+*.png
+*.p
+*.pt
+*.npy
+*.zip
