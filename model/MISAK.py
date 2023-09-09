@@ -7,7 +7,7 @@ import scipy.io as sio
 from metrics.misi import MISI
 
 class MISA(nn.Module):
-    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu', model=None):
+    def __init__(self, weights=list(), index=None, subspace=list(), beta=0.5, eta=1, lam=1, input_dim=list(), output_dim=list(), bias=False, seed=0, device='cpu', model=None, latent_dim=None):
         # Read identity matrix from columns to rows, ie source = columns and subspace = rows
         super(MISA, self).__init__()
         self.seed = seed
@@ -27,6 +27,7 @@ class MISA(nn.Module):
         self.nu = nu
         self.input_model = model
         self.n_modality = index.stop
+        self.latent_dim = latent_dim
         if self.input_model:
             # self.input_dim = self.input_model.output_dim # TODO revisit: How to obtain iVAE output_dim
             if weights != []:
@@ -87,11 +88,11 @@ class MISA(nn.Module):
             # iVAE
             z = []
             for m in range(len(self.input_model)):
-                encoder_params = self.input_model[m].encoder_params(x[0][:,:,m], x[1]) #x[0]: input, x[1]: auxiliary information
+                encoder_params = self.input_model[m].encoder_params(x[0][:,:,m], x[1]) #x[0]: input data, x[1]: auxiliary information
                 z.append(self.input_model[m].encoder_dist.sample(*encoder_params))
             self.output = z
 
-    def loss(self):
+    def loss(self, x=None, approximate_jacobian=True):
         JE = 0
         JF = 0
         JC = 0
@@ -121,27 +122,55 @@ class MISA(nn.Module):
             JC = JC + torch.sum(torch.log(torch.linalg.eigvalsh(g_k[:, None] * (yyT * g_k[None, :]))))
         JC = JC / 2
         fc = 0.5 * torch.log(torch.tensor(torch.pi)) * torch.sum(self.d) + torch.sum(torch.lgamma(self.nu)) - torch.sum(torch.lgamma(0.5 * self.d)) - torch.sum(self.nu * torch.log(self.lam)) - torch.sum(torch.log(self.beta))
-        for m in range(self.n_modality):
-            # net_fc = self.net[m]
-            if self.net is not None:
-                net_fc = self.net[m]
-            else:
-                # TODO Jacobian of the encoder
-                net_fc = self.input_model[m].g.fc[-1]
-            cc,rr = net_fc.weight.size()
+        
+        def compute_JD(jacobian):
+            jacobian = jacobian.squeeze()
+            cc,rr = jacobian.size()
             if rr == cc:
                 # input: sample x n_source x (n_source + n_segment)
-                JD = JD - torch.linalg.slogdet(net_fc.weight)[1]
+                jd = torch.linalg.slogdet(jacobian)[1]
             else:
                 # rectangular matrix
-                weight_sq = net_fc.weight @ net_fc.weight.T
+                jacobian_sq = jacobian @ jacobian.T
                 try:
-                    D = torch.linalg.eigvalsh(weight_sq)
+                    D = torch.linalg.eigvalsh(jacobian_sq)
                 except:
-                    # TODO revisit: add random noise to avoid ill-conditioned matrix
-                    noise = torch.normal(0, 1, size=weight_sq.size())
-                    D = torch.linalg.eigvalsh(weight_sq + noise)
-                JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
+                    # add random noise to avoid ill-conditioned matrix
+                    noise = torch.normal(0, 0.1, size = jacobian_sq.size())
+                    D = torch.linalg.eigvalsh(jacobian_sq + noise)
+                    jd = torch.sum(torch.log(torch.abs(torch.sqrt(D))))
+            return jd
+
+        for m in range(self.n_modality):
+            if self.net is not None:
+                net_fc = self.net[m]
+                jacobian = [net_fc.weight]
+            else:
+                # Jacobian of encoder weights
+                jacobian = [ torch.autograd.functional.jacobian( self.input_model[m].g, torch.unsqueeze(x[0][i,:,m], 0) ) for i in range(x[0].size()[0])] #x[0]: input data, x[1]: auxiliary information
+                if approximate_jacobian:
+                    jacobian = [torch.mean(torch.stack(jacobian), dim = 0)]
+            
+            jd = []
+            for j in jacobian:
+                jd.append(compute_JD(j))
+            JD = JD - torch.mean(torch.stack(jd))
+            
+            # cc,rr = jacobian.size()
+            # if rr == cc:
+            #     # input: sample x n_source x (n_source + n_segment)
+            #     JD = JD - torch.linalg.slogdet(jacobian)[1]
+            # else:
+            #     # rectangular matrix
+            #     jacobian_sq = jacobian @ jacobian.T
+            #     try:
+            #         D = torch.linalg.eigvalsh(jacobian_sq)
+            #     except:
+            #         # add random noise to avoid ill-conditioned matrix
+            #         noise = torch.normal(0, 0.1, size = jacobian_sq.size())
+            #         D = torch.linalg.eigvalsh(jacobian_sq + noise)
+            #     JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
+        
         J = JE + JF + JC + JD + fc
         return J
 
@@ -167,7 +196,7 @@ class MISA(nn.Module):
             for i, data in enumerate(train_data, 0):
                 optimizer.zero_grad()
                 self.forward(data)
-                loss = self.loss()
+                loss = self.loss(x=data)
                 loss.backward()
                 optimizer.step()
                 batch_loss.append(loss.detach())
@@ -208,7 +237,7 @@ class MISA(nn.Module):
         test_loss = []
         for i, data in enumerate(test_data, 0):
             self.forward(data)
-            loss = self.loss()
+            loss = self.loss(x=data)
             test_loss.append(loss.detach())
         return test_loss
 

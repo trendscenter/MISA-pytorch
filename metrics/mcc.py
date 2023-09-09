@@ -424,6 +424,17 @@ def mean_corr_coef_np(x, y, method='rdc'):
     return score
 
 
+def mean_corr_coef(x, y, method='rdc'):
+    if type(x) != type(y):
+        raise ValueError('inputs are of different types: ({}, {})'.format(type(x), type(y)))
+    if isinstance(x, np.ndarray):
+        return mean_corr_coef_np(x, y, method)
+    elif isinstance(x, torch.Tensor):
+        return mean_corr_coef_pt(x, y, method)
+    else:
+        raise ValueError('not a supported input type: {}'.format(type(x)))
+
+
 def mean_corr_coef_per_segment(x, y, u, method='rdc'):
     """
     A method to compute the mean correlation coefficient metric per segment.
@@ -471,15 +482,52 @@ def mean_corr_coef_per_segment(x, y, u, method='rdc'):
     return score, cc_list
 
 
-def mean_corr_coef(x, y, method='rdc'):
-    if type(x) != type(y):
-        raise ValueError('inputs are of different types: ({}, {})'.format(type(x), type(y)))
-    if isinstance(x, np.ndarray):
-        return mean_corr_coef_np(x, y, method)
-    elif isinstance(x, torch.Tensor):
-        return mean_corr_coef_pt(x, y, method)
-    else:
-        raise ValueError('not a supported input type: {}'.format(type(x)))
+def compute_rdc(x, y, u, method='rdc'):
+    """
+    Compute the randomized dependence coefficient per modality, per segment.
+
+    :param x: numpy.ndarray (observation per segment x segments) x sources x modalities
+    :param y: numpy.ndarray (observation per segment x segments) x sources x modalities
+    :param u: numpy.ndarray (observation per segment x segments) x auxiliary variables
+    :param method: str, optional
+            The method used to compute the correlation coefficients.
+                The options are 'pearson' and 'spearman'
+                'pearson':
+                    use Pearson's correlation coefficient
+                'spearman':
+                    use Spearman's nonparametric rank correlation coefficient
+                'rdc':
+                    use randomized dependence coefficient
+    :return: list
+    """
+    d = x.shape[1]
+    n_modality = x.shape[2]
+    n_segment = int(u.shape[1])
+    cc_list = []
+
+    # M x S matrices, each matrix is source by source
+    for m in range(n_modality):
+        cc_pm_list = []
+        for seg in range(n_segment):
+            ind = np.where(u[:,seg]==1)[0]
+            x_seg = x[ind,:,m]
+            y_seg = y[ind,:,m]
+            if method == 'pearson':
+                cc = np.abs(np.corrcoef(x_seg, y_seg, rowvar=False)[:d, d:])
+            elif method == 'spearman':
+                cc = np.abs(spearmanr(x_seg, y_seg)[0][:d, d:])
+            elif method == 'rdc':
+                cc = np.zeros((d, d))
+                for i in range(x_seg.shape[1]):
+                    for j in range(i, y_seg.shape[1]):
+                        cc[i, j] = np.abs(rdc(x_seg[:, i], y_seg[:, j]))
+                        cc[j, i] = cc[i, j]
+            else:
+                raise ValueError('not a valid method: {}'.format(method))
+            cc_pm_list.append(cc)
+        cc_list.append(cc_pm_list)
+    
+    return cc_list
 
 
 def mean_corr_coef_out_of_sample(x, y, x_test, y_test, method='pearson'):

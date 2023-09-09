@@ -19,12 +19,12 @@ data_seed: 1
 
 # model
 misa:
-  nRuns: 1
+  lr: [0.005] 
+  n_runs: 1
   batch_size: 100
-  lr: [0.005] # divide ivae lr by n_segments
 
 ivae:
   lr: [0.01] 
   batch_size: 70
   cuda: True
-  max_iter_per_epoch: [50]
+  max_iter_per_epoch: [10]

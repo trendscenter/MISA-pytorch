@@ -80,13 +80,13 @@ def run_misa(args, config):
     if 'lam' in config:
         lam = config.lam
 
-    if config.misa.nRuns != []:
-        nRuns = config.misa.nRuns
+    if config.misa.n_runs != []:
+        n_runs = config.misa.n_runs
     else:
-        nRuns = loguniform_int(0, 10).rvs(size=1)[0]
+        n_runs = loguniform_int(0, 10).rvs(size=1)[0]
     
-    if config.misa.epochs != []:
-        epochs = config.misa.epochs
+    if config.n_epochs != []:
+        epochs = config.n_epochs
     else:
         # the integer type returned by loguniform_int is int64, 
         # which can't recognized as an int in DataLoader,
@@ -185,7 +185,7 @@ def run_misa(args, config):
         elif mask_name.lower() in ['ukb2907-smri-aal2']:
             pass
 
-    for seed in range(nRuns):
+    for seed in range(n_runs):
         # print('Running exp with L={} and n={}; seed={}'.format(l, n, seed))
         
         if data.lower() == 'mat':

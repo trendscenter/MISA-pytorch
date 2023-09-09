@@ -127,10 +127,11 @@ class MLP_aux(nn.Module):
         return x.tanh() + alpha * x
 
     def forward(self, x):
-        h = x[:, :self.input_dim] # data
-        hu = x[:, self.input_dim:] # auxilliary information
+        h = x[:,:self.input_dim] # data
+        hu = x[:,self.input_dim:] # auxilliary information
+        
         for c in range(self.n_layers):
-            if c == self.n_layers - 1 and self.n_layers == 1 and self.use_aux:
+            if self.n_layers == 1 and self.use_aux:
                 h = self.fc[c](h) + self.aux_fc[c](hu)
             elif c == self.n_layers - 1:
                 h = self.fc[c](h)
@@ -251,7 +252,7 @@ class Bernoulli(Dist):
 
 class iVAE(nn.Module):
     def __init__(self, latent_dim, data_dim, aux_dim, prior=None, decoder=None, encoder=None,
-                 n_layers=3, hidden_dim=50, activation='lrelu', slope=.1, device='cpu', anneal=False):
+                 n_layers=3, hidden_dim=50, activation="lrelu", slope=.1, device="cpu", anneal=False, use_aux=False, method="diva"):
         super().__init__()
 
         self.data_dim = data_dim
@@ -262,6 +263,8 @@ class iVAE(nn.Module):
         self.activation = activation
         self.slope = slope
         self.anneal_params = anneal
+        self.use_aux = use_aux
+        self.method = method
 
         if prior is None:
             self.prior_dist = Normal(device=device)
@@ -280,17 +283,22 @@ class iVAE(nn.Module):
 
         # prior params
         self.prior_mean = torch.zeros(1).to(device)
-        # self.logl = MLP(aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
-        self.logl = MLP_aux(aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=False)
-        # decoder params
-        # self.f = MLP(latent_dim, data_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
-        self.f = MLP_aux(latent_dim, data_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=False)
-        self.decoder_var = .01 * torch.ones(1).to(device)
-        # encoder params
-        # self.g = MLP(data_dim + aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
-        self.g = MLP_aux(data_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=True, aux_dim=aux_dim)
-        # self.logv = MLP(data_dim + aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
-        self.logv = MLP_aux(data_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=True, aux_dim=aux_dim)
+        if method == "diva":
+            self.logl = MLP_aux(aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=False)
+            # decoder params
+            self.f = MLP_aux(latent_dim, data_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=False)
+            self.decoder_var = .01 * torch.ones(1).to(device)
+            # encoder params
+            self.g = MLP_aux(data_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=self.use_aux, aux_dim=aux_dim)
+            self.logv = MLP_aux(data_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device, use_aux=self.use_aux, aux_dim=aux_dim)
+        elif method == "ivae":
+            self.logl = MLP(aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
+            # decoder params
+            self.f = MLP(latent_dim, data_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
+            self.decoder_var = .01 * torch.ones(1).to(device)
+            # encoder params
+            self.g = MLP(data_dim + aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
+            self.logv = MLP(data_dim + aux_dim, latent_dim, hidden_dim, n_layers, activation=activation, slope=slope, device=device)
 
         self.apply(weights_init)
 
@@ -309,6 +317,9 @@ class iVAE(nn.Module):
     def prior_params(self, u):
         logl = self.logl(u)
         return self.prior_mean, logl.exp()
+
+    def set_aux(self, use_aux = True):
+        self.use_aux = use_aux
 
     def forward(self, x, u):
         prior_params = self.prior_params(u)

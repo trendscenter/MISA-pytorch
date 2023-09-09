@@ -6,6 +6,7 @@ from dataset.dataset import Dataset
 from torch.utils.data import DataLoader
 from data.imca import generate_synthetic_data, ConditionalDataset
 from metrics.mcc import mean_corr_coef, mean_corr_coef_per_segment
+from metrics.mmse import MMSE
 from model.ivae.ivae_core import iVAE
 from model.ivae.ivae_wrapper import IVAE_wrapper_
 from model.MISAK import MISA
@@ -17,7 +18,7 @@ from sklearn.decomposition import PCA
 def run_ivae_exp(args, config):
     """run iVAE simulations"""
     method = args.method
-    n_modalities = config.n_modalities
+    n_modality = config.n_modalities
     n_sims = config.n_sims
     experiment = config.experiment
     
@@ -41,8 +42,8 @@ def run_ivae_exp(args, config):
     dataset = config.dataset
 
     # MISA config
-    input_dim = [data_dim] * n_modalities
-    output_dim = [data_dim] * n_modalities
+    input_dim = [data_dim] * n_modality
+    output_dim = [data_dim] * n_modality
     subspace = config.subspace
     if subspace.lower() == 'iva':
         subspace = [torch.eye(dd, device=device) for dd in output_dim]
@@ -88,10 +89,10 @@ def run_ivae_exp(args, config):
     else:
         max_iter_per_epoch_list = config.ivae.max_iter_per_epoch
     
-    nRuns = config.misa.nRuns
+    n_runs = config.misa.n_runs
     batch_size_misa = config.misa.batch_size
     lr_misa_list = config.misa.lr
-    index = slice(0, n_modalities)
+    index = slice(0, n_modality)
     data_path = args.data_path
 
     epoch_interval = 10 # save result every 10 epochs
@@ -99,6 +100,7 @@ def run_ivae_exp(args, config):
     res_corr = {l: {e: [] for e in [n*epoch_interval for n in range(n_epochs//epoch_interval+1) ]} for l in n_layers}
     res_recovered_source = {l: {e: [] for e in [n*epoch_interval for n in range(n_epochs//epoch_interval+1) ]} for l in n_layers}
     res_ground_truth_source = {l: [] for l in n_layers}
+    res_metric = {l: [] for l in n_layers}
 
     for l in n_layers:
         for n in n_obs_per_seg:
@@ -144,11 +146,11 @@ def run_ivae_exp(args, config):
                             model_iVAE_list = []
 
                             # initiate iVAE model for each modality
-                            for m in range(n_modalities):
+                            for m in range(n_modality):
                                 ckpt_file = os.path.join(args.run, f'{experiment}_diva_layer{l}_source{data_dim}_obs{n}_seg{n_segments}_seed{seed}_modality{m+1}_epoch{n_epochs}_maxiter{mi_ivae}_lrivae{lr_ivae}.pt')
-                                dset = ConditionalDataset(x[:,:,m].astype(np.float32), y.astype(np.float32), device)
-                                train_loader = DataLoader(dset, shuffle=True, batch_size=batch_size_ivae, **loader_params)
-                                data_dim, latent_dim, aux_dim = dset.get_dims() # data_dim = 30, latent_dim = 30, aux_dim = 14
+                                ds = ConditionalDataset(x[:,:,m].astype(np.float32), y.astype(np.float32), device)
+                                train_loader = DataLoader(ds, shuffle=True, batch_size=batch_size_ivae, **loader_params)
+                                data_dim, latent_dim, aux_dim = ds.get_dims() # data_dim = 30, latent_dim = 30, aux_dim = 14
                                 
                                 model_iVAE = iVAE(latent_dim, 
                                                 data_dim, 
@@ -156,7 +158,8 @@ def run_ivae_exp(args, config):
                                                 activation='lrelu', 
                                                 device=device, 
                                                 n_layers=l, 
-                                                hidden_dim=data_dim * 2)
+                                                hidden_dim=data_dim * 2,
+                                                method=method.lower())
                                 
                                 res_iVAE, model_iVAE, params_iVAE = IVAE_wrapper_(X=x[:,:,m], U=y, n_layers=l, 
                                                             hidden_dim=data_dim * 2, cuda=cuda, max_iter=mi_ivae, lr=lr_ivae,
@@ -164,6 +167,10 @@ def run_ivae_exp(args, config):
                                 
                                 model_iVAE_list.append(model_iVAE)
                             
+                            for m in range(n_modality):
+                                model_iVAE_list[m].set_aux(False)
+                                print(f"model_iVAE_list[{m}].use_aux = {model_iVAE_list[m].use_aux}")
+
                             model_MISA = MISA(weights=initial_weights, # TODO MGPCA weights "mgpca"
                                                 index=index, 
                                                 subspace=subspace, 
@@ -175,7 +182,7 @@ def run_ivae_exp(args, config):
                                                 seed=seed, 
                                                 device=device,
                                                 model=model_iVAE_list)
-                            
+                                                
                             # update iVAE and MISA model weights
                             # run iVAE per modality
                             np.random.seed(7)
@@ -202,11 +209,9 @@ def run_ivae_exp(args, config):
 
                                         x_seg_dm = x_seg - np.mean(x_seg, axis=0) # remove mean of segment
                                         
-                                        # dset = ConditionalDataset(x_seg_dm.astype(np.float32), y_seg.astype(np.float32), device)
-                                        # y_seg_zero = np.zeros_like(y_seg)
-                                        dset = ConditionalDataset(x_seg_dm.astype(np.float32), y_seg.astype(np.float32), device)
-                                        train_loader = DataLoader(dset, shuffle=True, batch_size=batch_size_misa, **loader_params)
-                                        test_loader = DataLoader(dset, shuffle=False, batch_size=len(dset), **loader_params)
+                                        ds = ConditionalDataset(x_seg_dm.astype(np.float32), y_seg.astype(np.float32), device)
+                                        train_loader = DataLoader(ds, shuffle=True, batch_size=batch_size_misa, **loader_params)
+                                        test_loader = DataLoader(ds, shuffle=False, batch_size=len(ds), **loader_params)
 
                                         model_MISA, final_MISI = MISA_wrapper_(data_loader=train_loader,
                                                             test_data_loader=test_loader,
@@ -216,20 +221,30 @@ def run_ivae_exp(args, config):
                                                             ckpt_file=ckpt_file,
                                                             model_MISA=model_MISA)
 
-                                for m in range(n_modalities):
+                                for m in range(n_modality):
+                                    model_MISA.input_model[m].set_aux(True)
+                                    print(f"model_MISA.input_model[{m}].use_aux = {model_MISA.input_model[m].use_aux}")
                                     res_iVAE, model_MISA.input_model[m], params_iVAE = IVAE_wrapper_(X=x[:,:,m], U=y, n_layers=n_layers, hidden_dim=data_dim * 2,
                                                         cuda=cuda, max_iter=mi_ivae, lr=lr_ivae, ckpt_file=ckpt_file, seed=seed, test=False, model=model_MISA.input_model[m])
+                                    model_MISA.input_model[m].set_aux(False)
+                                    print(f"model_MISA.input_model[{m}].use_aux = {model_MISA.input_model[m].use_aux}")
                                     
                                     # store results every epoch_interval epochs
                                     if e % epoch_interval == 0:
                                         res_ivae = res_iVAE.detach().numpy()
+                                        
                                         if experiment == 'sim':
                                             res_corr[l][e].append(mean_corr_coef(res_ivae, s[:,:,m]))
                                             res_corr[l][e].append(mean_corr_coef_per_segment(res_ivae, s[:,:,m], y))
                                             print(res_corr[l][e])
                                             res_recovered_source[l][e].append(res_ivae)
-                                            if e//epoch_interval == epoch_last: # last epoch
-                                                res_ground_truth_source[l].append(s[:,:,m])
+                                            if e//epoch_interval == epoch_last and m == n_modality - 1: # last epoch, last modality
+                                                res_ground_truth_source[l].append(s)
+                                                res_ivae_stack = np.dstack(res_recovered_source[l][e])
+                                                mse_ps, mcc_ps, Rr_ps, mse_pm, mcc_pm, Rr_pm, mse, mcc, Rr = MMSE(res_ivae_stack, s, y)
+                                                metric = { 'mse_ps': mse_ps, 'mcc_ps': mcc_ps, 'Rr_ps': Rr_ps, 'mse_pm': mse_pm, 'mcc_pm': mcc_pm, 'Rr_pm': Rr_pm, 'mse': mse, 'mcc': mcc, 'Rr': Rr }
+                                                res_metric[l].append(metric)
+                                        
                                         elif experiment == 'img':
                                             res_recovered_source[l][e].append(res_ivae)
 
@@ -237,11 +252,11 @@ def run_ivae_exp(args, config):
                             # intiate iVAE model for each modality
                             model_iVAE_list = []
                             
-                            for m in range(n_modalities):
+                            for m in range(n_modality):
                                 ckpt_file = os.path.join(args.run, f'{experiment}_ivae_layer{l}_source{data_dim}_obs{n}_seg{n_segments}_seed{seed}_modality{m+1}_epoch{n_epochs}_maxiter{mi_ivae}_lrivae{lr_ivae}.pt')
-                                dset = ConditionalDataset(x[:,:,m].astype(np.float32), y.astype(np.float32), device)
-                                train_loader = DataLoader(dset, shuffle=True, batch_size=batch_size_ivae, **loader_params)
-                                data_dim, latent_dim, aux_dim = dset.get_dims() # data_dim: 10, latent_dim: 10, aux_dim: 20
+                                ds = ConditionalDataset(x[:,:,m].astype(np.float32), y.astype(np.float32), device)
+                                train_loader = DataLoader(ds, shuffle=True, batch_size=batch_size_ivae, **loader_params)
+                                data_dim, latent_dim, aux_dim = ds.get_dims() # data_dim: 10, latent_dim: 10, aux_dim: 20
                                 
                                 model_iVAE = iVAE(latent_dim, 
                                                 data_dim, 
@@ -249,7 +264,8 @@ def run_ivae_exp(args, config):
                                                 activation='lrelu', 
                                                 device=device, 
                                                 n_layers=l, 
-                                                hidden_dim=data_dim * 2)
+                                                hidden_dim=data_dim * 2,
+                                                method=method.lower())
                                 
                                 for e in range(n_epochs):
                                     print('Epoch: {}'.format(e))
@@ -259,13 +275,20 @@ def run_ivae_exp(args, config):
                                     
                                     if e % epoch_interval == 0:
                                         res_ivae = res_iVAE.detach().numpy()
+                                        
                                         if experiment == 'sim':
                                             res_corr[l][e].append(mean_corr_coef(res_ivae, s[:,:,m]))
                                             res_corr[l][e].append(mean_corr_coef_per_segment(res_ivae, s[:,:,m], y))
                                             print(res_corr[l][e])
                                             res_recovered_source[l][e].append(res_ivae)
-                                            if e//epoch_interval == epoch_last: # last epoch
-                                                res_ground_truth_source[l].append(s[:,:,m])
+                                        
+                                            if e//epoch_interval == epoch_last and m == n_modality - 1: # last epoch, last modality
+                                                res_ground_truth_source[l].append(s)
+                                                res_ivae_stack = np.dstack(res_recovered_source[l][e])
+                                                mse_ps, mcc_ps, Rr_ps, mse_pm, mcc_pm, Rr_pm, mse, mcc, Rr = MMSE(res_ivae_stack, s, y)
+                                                metric = { 'mse_ps': mse_ps, 'mcc_ps': mcc_ps, 'Rr_ps': Rr_ps, 'mse_pm': mse_pm, 'mcc_pm': mcc_pm, 'Rr_pm': Rr_pm, 'mse': mse, 'mcc': mcc, 'Rr': Rr }
+                                                res_metric[l].append(metric)
+                                        
                                         elif experiment == 'img':
                                             res_recovered_source[l][e].append(res_ivae)
                                 
@@ -294,7 +317,7 @@ def run_ivae_exp(args, config):
                             if experiment == "sim":
                                 res_MISA = np.zeros_like(s)
                             else:
-                                res_MISA = np.zeros( (x.shape[0], data_dim, n_modalities ) )
+                                res_MISA = np.zeros((x.shape[0], data_dim, n_modality))
 
                             for e in range(n_epochs):
                                 print('Epoch: {}'.format(e))
@@ -306,7 +329,6 @@ def run_ivae_exp(args, config):
                                         x_seg = x[seg*n:(seg+1)*n,:,:]
                                     elif experiment == "img":
                                         ind = np.where(y[:,seg]==1)[0]
-                                        y_seg = y[ind,:]
                                         x_seg = x[ind,:,:]
                                     x_seg_dm = x_seg - np.mean(x_seg, axis=0) # remove mean of segment
                                     # a list of datasets, each dataset dimension is sample x source
@@ -323,21 +345,24 @@ def run_ivae_exp(args, config):
                                                         model_MISA=model_MISA)
 
                                     if e % epoch_interval == 0:
-                                        for m in range(n_modalities):
+                                        for m in range(n_modality):
                                             if experiment == "sim":
                                                 res_MISA[seg*n:(seg+1)*n,:,m] = model_MISA.output[m].detach().numpy()
                                             elif experiment == "img":
                                                 res_MISA[ind,:,m] = model_MISA.output[m].detach().numpy()
                                 
                                 if e % epoch_interval == 0:
-                                    for m in range(n_modalities):
+                                    for m in range(n_modality):
                                         if experiment == 'sim':
                                             res_corr[l][e].append(mean_corr_coef(res_MISA[:,:,m], s[:,:,m]))
                                             res_corr[l][e].append(mean_corr_coef_per_segment(res_MISA[:,:,m], s[:,:,m], y))
                                             print(res_corr[l][e])
                                             res_recovered_source[l][e].append(res_MISA[:,:,m])
-                                            if e//epoch_interval == epoch_last: # last epoch
-                                                res_ground_truth_source[l].append(s[:,:,m])
+                                            if e//epoch_interval == epoch_last and m == n_modality - 1: # last epoch, last modality
+                                                res_ground_truth_source[l].append(s)
+                                                mse_ps, mcc_ps, Rr_ps, mse_pm, mcc_pm, Rr_pm, mse, mcc, Rr = MMSE(res_MISA, s, y)
+                                                metric = { 'mse_ps': mse_ps, 'mcc_ps': mcc_ps, 'Rr_ps': Rr_ps, 'mse_pm': mse_pm, 'mcc_pm': mcc_pm, 'Rr_pm': Rr_pm, 'mse': mse, 'mcc': mcc, 'Rr': Rr }
+                                                res_metric[l].append(metric)
                                         elif experiment == 'img':
                                             res_recovered_source[l][e].append(res_MISA[:,:,m])
                                 
@@ -347,7 +372,8 @@ def run_ivae_exp(args, config):
         'data_segments': n_segments,
         'mcc': res_corr,
         'recovered_source': res_recovered_source,
-        'ground_truth_source': res_ground_truth_source
+        'ground_truth_source': res_ground_truth_source,
+        'metric': res_metric
     }
 
     return Results
