@@ -76,6 +76,7 @@ class MISA(nn.Module):
             tot = 0
             for mm in range(self.index.stop)[self.index]:
                 ix = slice(tot, tot + self.d_k[mm][kk].int())
+                # print("ysub", y_sub.shape, " ix ", ix, " self output shape ", self.output[mm].shape, ' subspace shape ', self.subspace[mm][kk, :])
                 if ix.start < ix.stop:
                     y_sub[:, ix] = self.output[mm][:,self.subspace[mm][kk, :] == 1]
                 tot = tot + self.d_k[mm][kk].int()

@@ -51,6 +51,7 @@ def run_misa(args, config):
     w = args.weights
     test = args.test
     A_exist = args.a_exist
+    lr = args.learning_rate
     
     # From config:
     device = config.device
@@ -99,10 +100,10 @@ def run_misa(args, config):
     else:
         batch_size = int(loguniform_int(20, 1000).rvs(size=1)[0])
     
-    if config.special.lr != []:
-        lr = config.special.lr
-    else:
-        lr = loguniform.rvs(0.00001, 0.1, size=1)[0]
+    # if config.special.lr != []:
+    #     lr = config.special.lr
+    # else:
+    #     lr = loguniform.rvs(0.00001, 0.1, size=1)[0]
     
     # results = {l: {n: [] for n in data_seed} for l in n_layers}
 
@@ -115,7 +116,7 @@ def run_misa(args, config):
     if data.lower() == 'mat':
         # load the data
         # matfile = os.path.join('./simulation_data', 'sim-{}.mat'.format(config.dataset))
-        matfile = os.path.join('./simulation_data', data_filename)
+        matfile = os.path.join('/data/users4/xli/MISA-pytorch/simulation_data', data_filename)
         ds=Dataset(data_in=matfile, device=device)
         if len(ds) < batch_size:
             batch_size = len(ds)
@@ -143,6 +144,7 @@ def run_misa(args, config):
         if A_exist:
             ground_truth_A = [i for _, i in enumerate(matA)]
             ground_truth_Y = [i.T for _, i in enumerate(matY)]
+            # config.output_dim = [AA.shape[1] for AA in ground_truth_A]
         
         num_modal = ds.num_modal
         index = slice(0, num_modal)
@@ -152,7 +154,7 @@ def run_misa(args, config):
             output_dim = [torch.tensor(dd,device=device) for dd in output_dim]
         else:
             output_dim = input_dim
-
+        print(input_dim, output_dim)
         if subspace.lower() == 'iva':
             subspace = [torch.eye(dd, device=device) for dd in output_dim]
         
