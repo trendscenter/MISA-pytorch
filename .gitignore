@@ -3,6 +3,8 @@
 run/
 model/__pycache__/
 model/__pycache__
+slurm_logs/
+results/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
