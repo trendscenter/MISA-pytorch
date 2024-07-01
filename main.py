@@ -20,7 +20,7 @@ def parse_sim():
     required.add_argument('-c', '--config', type=str, default='sim-siva.yaml', help='Path to the config file')
     required.add_argument('-r', '--run', type=str, default='run/', help='Path for saving running related data.')
     required.add_argument('-t', '--test', action='store_true', help='Whether to evaluate the models from checkpoints')
-    required.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Learning rate for model training')
+    
     optional.add_argument('-a', '--a_exist', action='store_true', help='Whether the dataset includes ground truth A matrix')
     parser._action_groups.append(optional)
 
@@ -33,7 +33,7 @@ def parse_sim():
 
 def make_dirs_simulations(args):
     os.makedirs(args.run, exist_ok=True)
-    args.checkpoints = os.path.join(args.run, 'checkpoints', args.config.split('/')[-1].split('.')[0])
+    args.checkpoints = os.path.join(args.run, 'checkpoints', args.config.split('.')[0])
     os.makedirs(args.checkpoints, exist_ok=True)
 
 

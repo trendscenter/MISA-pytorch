@@ -4,8 +4,8 @@ subspace: "iva" # [2,4]
 eta: [1]
 beta: [0.5]
 lam: [1.102657790843584]
-input_dim: [12, 12, 12]
-output_dim: []
+input_dim: [30, 30, 30]
+output_dim: [30, 30, 30]
 
 special:
   nRuns: 1
