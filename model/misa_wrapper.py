@@ -31,7 +31,7 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
             final_MISI = training_MISI[-1]
         
         test_loss = model.predict(test_data_loader)
-        print(f"test loss: {test_loss[0].numpy():.3f}")
+        print(f"test loss: {test_loss[0].detach().cpu().numpy():.3f}")
 
         torch.save({'model': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
