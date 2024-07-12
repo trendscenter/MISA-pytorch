@@ -104,16 +104,15 @@ class MISA(nn.Module):
                 JD = JD - torch.sum(torch.log(torch.abs(torch.sqrt(D))))
         J = JE + JF + JC + JD + fc
         return J
-
-    def train_me(self, train_data, n_iter, learning_rate, A=None):
-        optim = torch.optim.Adam(self.parameters(), lr = learning_rate)
+    def train_me(self, train_data, n_iter, learning_rate, A, beta1, beta2, batch_size, weights, seed, patience, fused, foreach):
+        optim = torch.optim.Adam(self.parameters(), lr = learning_rate, betas=(beta1, beta2), fused=fused, foreach=foreach)
         training_loss = []
         batch_loss = []
         training_MISI = []        
         trigger_times = 0
         nn_weight_threshold = 1e-4
         loss_threshold = 0.1
-        patience = 2
+        # patience = 2
         
         for epochs in range(n_iter):
             for i, data in enumerate(train_data, 0):
@@ -147,13 +146,14 @@ class MISA(nn.Module):
                     print(f'Trigger Times: {trigger_times}')
                     if trigger_times > patience:
                         print(f'Early stopping! \nThe maximum absolute difference of W matrix is less than {nn_weight_threshold} or that of loss is less than {loss_threshold} between the previous and current iteration for {trigger_times} iterations.')
-                        return training_loss, training_MISI, optim
+                        epochs_completed = epochs
+                        return training_loss, training_MISI, optim, epochs_completed
                 else:
                     trigger_times = 0
                 nn_weight_previous = copy.deepcopy(nn_weight_current)
                 loss_previous = loss_current
 
-        return training_loss, training_MISI, optim
+        return training_loss, training_MISI, optim, epochs_completed
 
     def predict(self, test_data):
         test_loss = []

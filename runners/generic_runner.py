@@ -52,7 +52,13 @@ def run_misa(args, config):
     test = args.test
     A_exist = args.a_exist
     lr = args.learning_rate
-    
+    beta1 = args.beta1
+    beta2 = args.beta2
+    batch_size = args.batch_size
+    patience = args.patience 
+    fused = args.fused 
+    foreach = args.foreach
+
     # From config:
     device = config.device
     # if 'mask_name' in config:
@@ -95,11 +101,13 @@ def run_misa(args, config):
         # so need to cast int64 to int here
         epochs = int(loguniform_int(100, 500).rvs(size=1)[0])
 
-    if config.special.batch_size != []:
-        batch_size = config.special.batch_size
-    else:
-        batch_size = int(loguniform_int(20, 1000).rvs(size=1)[0])
-    
+    # Batch size is being passed as arg from script, not from config file
+    # if config.special.batch_size != []:
+    #     batch_size = config.special.batch_size
+    # else:
+    #     batch_size = int(loguniform_int(20, 1000).rvs(size=1)[0])
+
+    # Learning rate is being passed as arg from script, not from config file
     # if config.special.lr != []:
     #     lr = config.special.lr
     # else:
@@ -196,7 +204,7 @@ def run_misa(args, config):
             ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_{}_s{}.pt'.format(data.lower(), data_filename.split('.')[0], w, seed))
         # else:
         #     ckpt_file = os.path.join(args.checkpoints, 'misa_{}_{}_s{}.pt'.format(data, mask_name, seed))
-        recov_sources, final_MISI = MISA_wrapper(data_loader=train_data,
+        recov_sources, final_MISI, run_time, epochs_completed = MISA_wrapper(data_loader=train_data,
                                      index=index,
                                      subspace=subspace, 
                                      eta=eta, 
@@ -212,7 +220,13 @@ def run_misa(args, config):
                                      device=device,
                                      ckpt_file=ckpt_file,
                                      test=test,
-                                     test_data_loader=test_data)
+                                     test_data_loader=test_data,
+                                     beta1=beta1,
+                                     beta2=beta2,
+                                     batch_size=batch_size,
+                                     patience=patience,
+                                     fused=fused,
+                                     foreach=foreach)
         
         # store results
         # recovered_sources[l][n].append(recov_sources)
@@ -235,7 +249,15 @@ def run_misa(args, config):
             'lr': lr,
             'epochs': epochs,
             'batch_size': batch_size,
-            'final_MISIs': final_MISIs}
+            'final_MISIs': final_MISIs,
+            'beta1': beta1,
+            'beta2': beta2,
+            'batch_size': batch_size,
+            'run_time': run_time,
+            'patience': patience,
+            'fused': fused,
+            'foreach': foreach,
+            'epochs_completed': epochs_completed}
     # else:
     #     if mask_name.lower() in ['simtb16']:
     #         Results = {
