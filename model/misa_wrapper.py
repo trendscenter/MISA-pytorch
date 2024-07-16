@@ -28,7 +28,7 @@ def MISA_wrapper(data_loader, index, subspace, eta, beta, lam, input_dim, output
     if not test:
         run_time_start = datetime.datetime.now().timestamp()
         training_loss, training_MISI, optimizer, epochs_completed = model.train_me(data_loader, epochs, lr, A, beta1, beta2, batch_size, weights, seed, patience, fused, foreach)
-        run_time_stop = datetime.datetime.now().timestamp
+        run_time_stop = datetime.datetime.now().timestamp()
         run_time = run_time_stop - run_time_start
         if len(training_MISI) > 0:
             final_MISI = training_MISI[-1]
