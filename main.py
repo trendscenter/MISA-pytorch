@@ -54,19 +54,19 @@ def dict2namespace(config):
         setattr(namespace, key, new_value)
     return namespace
 
-def append_csv(csv_path, experimenter, date_time, batch_size, num_subs, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data):
+def append_csv(csv_path, experimenter, date_time, batch_size, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data):
     file_exists = os.path.isfile(csv_path)
     with open(csv_path, 'a', newline='') as f:
         writer = csv.writer(f)
         if file_exists:
-            writer.writerows([[experimenter, date_time, batch_size, num_subs, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data]])
+            writer.writerows([[experimenter, date_time, batch_size, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data]])
         else:
-            writer.writerows([["experimenter","date_time", "batch_size", "num_subs", "learning_rate", "weights", "seed", "patience", "beta1", "beta2", "fused", "foreach", "run_time", "epochs_completed", "dataset_filename", "running_data"]], 
-                [[experimenter, date_time, batch_size, num_subs, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data]])
+            writer.writerows([["experimenter","date_time", "batch_size", "learning_rate", "weights", "seed", "patience", "beta1", "beta2", "fused", "foreach", "run_time", "epochs_completed", "dataset_filename", "running_data"]], 
+                [[experimenter, date_time, batch_size, learning_rate, weights, seed, patience, beta1, beta2, fused, foreach, run_time, epochs_completed, dataset_filename, running_data]])
 
 
 if __name__ == '__main__':
-    csv_path = "/data/users1/cmccurdy5/MISA-pytorch/results/misa_results.csv"
+    csv_path = "/data/users1/cmccurdy5/MISA-pytorch/results/MathPath2024/misa_results.csv"
     date_time = datetime.datetime.now().strftime("%Y-%m-%d_T%H-%M-%S")
 
     start_time = datetime.datetime.now()
@@ -93,7 +93,7 @@ if __name__ == '__main__':
                         vcpu.append(j.detach().cpu().numpy())
                 r[k] = vcpu
                 print("Finished updating r")
-        append_csv(csv_path, args.experimenter, date_time, args.batch_size, args.num_subs, args.learning_rate, args.weights, args.seed, args.patience, args.beta1, args.beta2, args.fused, args.foreach, args.run_time, r.get('epochs_completed'), args.filename, args.running_data)
+        append_csv(csv_path, args.experimenter, date_time, args.batch_size, args.learning_rate, args.weights, args.seed, args.patience, args.beta1, args.beta2, args.fused, args.foreach, r.get('run_time'), r.get('epochs_completed'), args.filename, args.run)
         # save results
         # runner loops over many seeds, so the saved file contains results from multiple runs
         if args.test:
