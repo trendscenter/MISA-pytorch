@@ -252,7 +252,6 @@ def run_misa(args, config):
             'final_MISIs': final_MISIs,
             'beta1': beta1,
             'beta2': beta2,
-            'batch_size': batch_size,
             'run_time': run_time,
             'patience': patience,
             'fused': fused,
