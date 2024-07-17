@@ -34,15 +34,15 @@ echo $W
 declare -i n_dataset=100
 declare -i n_source=12
 declare -i n_sample=32768
-lrs=(0.01 0.001 0.0001)
-batch_size=(316 316 316)
-patience=(10 10 10)
+lrs=(0.01)
+batch_size=(316)
+patience=(10)
 
 #Adam optimizer parameters
-foreach=(0 0 0)
-fused=(0 0 0)
-beta1=(0.7 0.8 0.9)
-beta2=(0.65 0.95 0.8)
+foreach=(0) #0 for False, 1 for True
+fused=(0) #0 for False, 1 for True
+beta1=(0.7)
+beta2=(0.65)
 
 experimenter="$USER"
 configuration="/data/users1/cmccurdy5/MISA-pytorch/configs/sim-siva.yaml"

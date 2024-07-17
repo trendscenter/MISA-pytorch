@@ -68,9 +68,18 @@ def append_csv(csv_path, experimenter, date_time, batch_size, learning_rate, wei
 if __name__ == '__main__':
     csv_path = "/data/users1/cmccurdy5/MISA-pytorch/results/MathPath2024/misa_results.csv"
     date_time = datetime.datetime.now().strftime("%Y-%m-%d_T%H-%M-%S")
-
     start_time = datetime.datetime.now()
+
     args = parse_sim()
+    if args.fused == 0:
+        args.fused = False
+    else:
+        args.fused = True
+    if args.foreach == 0:
+        args.foreach = False
+    else:
+        args.foreach = True
+
     print('\n\n\nRunning {} experiments'.format(args.data))
     # make checkpoint and log folders
     make_dirs_simulations(args)
