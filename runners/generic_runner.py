@@ -56,8 +56,15 @@ def run_misa(args, config):
     beta2 = args.beta2
     batch_size = args.batch_size
     patience = args.patience 
-    fused = args.fused 
-    foreach = args.foreach
+    if args.ff == 0:
+        fused = False
+        foreach = False
+    elif args.ff == 1:
+        fused = False
+        foreach = True
+    elif args.ff == 2:
+        fused = True
+        foreach = False
 
     # From config:
     device = config.device

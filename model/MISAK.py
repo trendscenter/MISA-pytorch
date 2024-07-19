@@ -152,7 +152,7 @@ class MISA(nn.Module):
                     trigger_times = 0
                 nn_weight_previous = copy.deepcopy(nn_weight_current)
                 loss_previous = loss_current
-
+                epochs_completed = epochs
         return training_loss, training_MISI, optim, epochs_completed
 
     def predict(self, test_data):
